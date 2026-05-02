@@ -9,7 +9,7 @@ pipeline = (
     "nvvidconv ! "
     "v4l2h264enc ! "
     "qtmux ! "
-    "filesink location=rover_test.mp4"
+    "filesink location=./rover_test.mp4"
 )
 
 # Using GStreamer directly for saving is more efficient than cv2.VideoWriter
