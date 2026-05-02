@@ -7,7 +7,7 @@ pipeline = (
     "v4l2src device=/dev/video0 ! "
     "video/x-raw, width=1280, height=720, framerate=30/1 ! "
     "nvvidconv ! "
-    "omxh264enc ! "
+    "v4l2h264enc ! "
     "qtmux ! "
     "filesink location=rover_test.mp4"
 )
