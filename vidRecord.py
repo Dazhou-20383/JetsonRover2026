@@ -1,35 +1,29 @@
 import cv2
 import time
 
-# Optimized pipeline for Logitech -> Hardware Encoding -> MP4 File
-# We use 'omxh264enc' for hardware acceleration on the Orin Nano
-pipeline = (
+# Optimized GStreamer pipeline for Logitech on Jetson
+pipeline = pipeline = (
     "v4l2src device=/dev/video0 ! "
-    "video/x-raw, width=1280, height=720, framerate=30/1 ! "
     "videoconvert ! "
-    "video/x-raw, format=I420 ! "
-    "x264enc tune=zerolatency bitrate=4000 speed-preset=ultrafast threads=4 ! "
-    "h264parse ! "
-    "qtmux ! "
-    "filesink location=./rover_test.mp4"
+    "video/x-raw, format=BGR ! "
+    "appsink drop=1"
 )
 
-# Using GStreamer directly for saving is more efficient than cv2.VideoWriter
-import subprocess
+cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
 
-print("Recording started... will record for 10 seconds.")
+print("Starting performance test... Press Ctrl+C to stop.")
+
 try:
-    # Run the GStreamer command via shell for direct hardware-to-disk recording
-    cmd = f"gst-launch-1.0 {pipeline}"
-    process = subprocess.Popen(cmd, shell=True)
-    
-    # Record for 10 seconds
-    time.sleep(10)
-    
-    # Gracefully terminate
-    process.terminate()
-    print("\nRecording finished. File saved as rover_test.mp4")
+    while True:
+        start_time = time.time() # Start latency timer
+        
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        cv2.imshow('Performance Test', frame)
 
 except KeyboardInterrupt:
-    process.terminate()
-    print("\nRecording stopped early.")
+    print("\nTest stopped by user.")
+
+cap.release()

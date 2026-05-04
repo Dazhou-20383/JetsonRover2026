@@ -23,6 +23,8 @@ try:
         ret, frame = cap.read()
         if not ret:
             break
+        
+        cv2.imshow('Performance Test', frame)
 
         # Calculate FPS
         new_frame_time = time.time()
