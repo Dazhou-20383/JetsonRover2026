@@ -24,8 +24,6 @@ try:
         if not ret:
             break
         
-        cv2.imshow('Performance Test', frame)
-
         # Calculate FPS
         new_frame_time = time.time()
         fps = 1 / (new_frame_time - prev_frame_time)
