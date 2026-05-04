@@ -4,7 +4,7 @@ import time
 # Optimized GStreamer pipeline for Logitech on Jetson
 pipeline = pipeline = (
     "v4l2src device=/dev/video0 ! "
-    "videoconvert ! "
+    "nvvidconv ! "
     "video/x-raw, format=BGR ! "
     "appsink drop=1"
 )
