@@ -18,6 +18,7 @@ new_frame_time = 0
 print("Starting performance test... Press Ctrl+C to stop.")
 
 frames = []
+fps_values = []
 
 try:
     while True:
@@ -39,13 +40,16 @@ try:
 
         # Print to terminal instead of showing window
         print(f"FPS: {fps:.2f} | Latency: {latency:.2f}ms", end="\r")
+        fps_values.append(fps)
 
 except KeyboardInterrupt:
     print("\nTest stopped by user.")
 finally:
     if frames:
         height, width, layers = frames[0].shape
-        out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), 30, (width, height))
+        average_fps = np.mean(fps_values)
+        print(f"\nAverage FPS: {average_fps:.2f}")
+        out = cv2.VideoWriter('output.mp4', cv2.VideoWriter_fourcc(*'mp4v'), average_fps, (width, height))
         for f in frames:
             out.write(f)
         out.release()
