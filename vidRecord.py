@@ -4,11 +4,11 @@ import time
 # Optimized pipeline for Logitech -> Hardware Encoding -> MP4 File
 # We use 'omxh264enc' for hardware acceleration on the Orin Nano
 pipeline = (
-    "v4l2src device=/dev/video0 io-mode=2 ! "
+    "v4l2src device=/dev/video0 ! "
     "video/x-raw, width=1280, height=720, framerate=30/1 ! "
-    "nvvideoconvert ! "
+    "videoconvert ! "
     "video/x-raw, format=I420 ! "
-    "x264enc tune=zerolatency bitrate=4000 speed-preset=ultrafast ! "
+    "x264enc tune=zerolatency bitrate=4000 speed-preset=ultrafast threads=4 ! "
     "h264parse ! "
     "qtmux ! "
     "filesink location=./rover_test.mp4"
