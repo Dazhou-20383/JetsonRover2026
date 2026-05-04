@@ -2,11 +2,12 @@ import cv2
 import time
 
 # Optimized GStreamer pipeline for Logitech on Jetson
-pipeline = pipeline = (
+pipeline = (
     "v4l2src device=/dev/video0 ! "
-    "nvvidconv ! "
-    "video/x-raw, format=BGR ! "
-    "appsink drop=1"
+    "image/jpeg, width=1280, height=720, framerate=30/1 ! "
+    "jpegdec ! "
+    "videoconvert ! "
+    "appsink drop=1 sync=0"
 )
 
 cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
