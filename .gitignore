@@ -1,7 +1,21 @@
-.venv
-.vscode
-
-install/
+# ROS2 / colcon
 build/
+install/
 log/
 
+# Python
+__pycache__/
+*.pyc
+
+# VSCode / IDEs
+.vscode/
+.idea/
+
+# OS noise
+.DS_Store
+Thumbs.db
+
+cuda-keyring_1.1-1_all.deb
+
+src/mbra/mbra/deployment/latest
+src/mbra/mbra/deployment/model_weights
