@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 train/wandb
 train/logs
 deployment/model_weights
@@ -9,3 +10,8 @@ map_cache
 train/vint_train/data/sampler
 train/config/LogoNav_.yaml
 download_youtube/videos
+=======
+build/
+install/
+log/
+>>>>>>> 17d9a02 (initialize motion-converter package with basic structure and configuration files)
