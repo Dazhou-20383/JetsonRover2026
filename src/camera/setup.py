@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'motion-converter'
+package_name = 'camera'
 
 setup(
     name=package_name,
@@ -14,7 +14,7 @@ setup(
     install_requires=['setuptools'],
     zip_safe=True,
     maintainer='boya',
-    maintainer_email='boya@todo.todo',
+    maintainer_email='kevin20383sabis@gmail.com',
     description='TODO: Package description',
     license='TODO: License declaration',
     extras_require={
@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+                'camera_node = camera.camera_node:main',
         ],
     },
 )
