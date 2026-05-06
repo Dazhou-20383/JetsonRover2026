@@ -12,7 +12,7 @@ class VideoLogger(Node):
 
         self.image_sub = self.create_subscription(
             Image,
-            '/image_compressed',
+            '/camera/image_compressed',
             self.image_callback,
             10
         )
