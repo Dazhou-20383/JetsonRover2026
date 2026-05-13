@@ -1,9 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import sys
-sys.path.insert(0, '../train')
-
 import os
 import time
 
@@ -27,30 +24,8 @@ import numpy as np
 import math
 import transforms3d
 from transforms3d import quaternions
-from utils_logonav import load_model, msg_to_pil, transform_images_mbra, to_numpy, clip_angle
-
-# load model weights
-model_config_path = "../train/config/LogoNav.yaml"
-with open(model_config_path, "r") as f:
-    model_params = yaml.safe_load(f)
-    
-#checkpoint path    
-ckpth_path = "./model_weights/logonav.pth"
-
-device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-if os.path.exists(ckpth_path):
-    rclpy.logging.get_logger('LogoNav').info(f"Loading model from {ckpth_path}")
-else:
-    raise FileNotFoundError(f"Model weights not found at {ckpth_path}")
-    
-model = load_model(
-    ckpth_path,
-    model_params,
-    device,
-)
-model = model.to(device)
-model.eval()  
+from .utils_logonav import load_model, msg_to_pil, transform_images_mbra, to_numpy, clip_angle
+from ament_index_python.packages import get_package_share_directory
 
 def msg_to_pil(msg: Image) -> PILImage.Image:
     img = np.frombuffer(msg.data, dtype=np.uint8).reshape(
@@ -89,6 +64,44 @@ def calc_relative_pose(pose_a, pose_b):
 class MBRANode(Node):
     def __init__(self):
         super().__init__('LogoNav')
+        
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        
+        self.declare_parameter('model_weights_path', './model_weights/logonav.pth')
+        self.declare_parameter('config_path', 'config/LogoNav.yaml')
+        
+        ckpth_path = self.get_parameter('model_weights_path').get_parameter_value().string_value
+        config_path_param = self.get_parameter('config_path').get_parameter_value().string_value
+        
+        try:
+            share_dir = get_package_share_directory('mbra')
+            if not os.path.isabs(config_path_param):
+                model_config_path = os.path.join(share_dir, config_path_param)
+            else:
+                model_config_path = config_path_param
+        except Exception:
+            model_config_path = config_path_param
+            self.get_logger().warn(f"Could not get package share directory, using {model_config_path}")
+
+        with open(model_config_path, "r") as f:
+            self.model_params = yaml.safe_load(f)
+
+        if os.path.exists(ckpth_path):
+            self.get_logger().info(f"Loading model from {ckpth_path}")
+        else:
+            self.get_logger().warn(f"Model weights not found at {ckpth_path}. Expected later or please update node parameter.")
+            # raise FileNotFoundError(f"Model weights not found at {ckpth_path}")
+            
+        self.model = load_model(
+            ckpth_path,
+            self.model_params,
+            self.device,
+        )
+        self.model = self.model.to(self.device)
+        self.model.eval()
+
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # if local imports are still problematic
+
         self.img_sub = self.create_subscription(
             Image,
             '/usb_cam/image_raw',
@@ -135,8 +148,8 @@ class MBRANode(Node):
     def callback_logonav(self, msg_1):
 
         if True:
-            newsize = model_params["image_size"]   
-            context_size = model_params["context_size"]
+            newsize = self.model_params["image_size"]   
+            context_size = self.model_params["context_size"]
             im = msg_to_pil(msg_1)
             #im_crop_o = im.crop((50, 100, 1230, 860)) #you may need to crop your raw camera image to be better performance.
             im_crop_o = im
@@ -158,7 +171,7 @@ class MBRANode(Node):
             obs_images = transform_images_mbra(self.image_hist)
             obs_images = torch.split(obs_images, 3, dim=1)
             obs_images = torch.cat(obs_images, dim=1) 
-            batch_obs_images = obs_images.to(device)
+            batch_obs_images = obs_images.to(self.device)
         
             
             with torch.no_grad():                        
@@ -181,18 +194,18 @@ class MBRANode(Node):
                     relative_ang = relative_pose[2]               
                     goal_pose = np.array([relative_x/metric_waypoint_spacing, relative_y/metric_waypoint_spacing, np.cos(relative_ang), np.sin(relative_ang)])
                                 
-                    if np.sqrt(relative_x**2 + relative_y**2) < thres_update and self.id_goal != len(yaw_subgoal) - 1:              
+                    if np.sqrt(relative_x**2 + relative_y**2) < thres_update and self.id_goal != len(self.yaw_subgoal) - 1:              
                         self.id_goal += 1                     
                         
                 else:
                     goal_pose = np.array([100.0, 0.0, 1.0, 0.0])            
                 
-                goal_pose_torch = torch.from_numpy(goal_pose).unsqueeze(0).float().to(device)
+                goal_pose_torch = torch.from_numpy(goal_pose).unsqueeze(0).float().to(self.device)
                 
                 self.get_logger().info(f"robot pose {self.x_position} {self.y_position} {self.yaw_angle}")
                 self.get_logger().info(f"relative pose {goal_pose[0]*metric_waypoint_spacing} {goal_pose[1]*metric_waypoint_spacing} {goal_pose[2]} {goal_pose[3]} {self.id_goal}")            
                 with torch.no_grad():  
-                    waypoints = model(batch_obs_images, goal_pose_torch)         
+                    waypoints = self.model(batch_obs_images, goal_pose_torch)         
                 waypoints = to_numpy(waypoints)
             
             #PD controller from ViNT and NoMaD    

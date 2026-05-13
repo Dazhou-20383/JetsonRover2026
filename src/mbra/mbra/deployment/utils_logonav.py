@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, '../train')
-
 import os
 import io
 import matplotlib.pyplot as plt
@@ -19,19 +16,19 @@ from PIL import Image as PILImage
 from typing import List, Tuple, Dict, Optional
 
 # models
-from vint_train.models.gnm.gnm import GNM
-from vint_train.models.vint.vint import ViNT
+from mbra.train.vint_train.models.gnm.gnm import GNM
+from mbra.train.vint_train.models.vint.vint import ViNT
 
-from vint_train.models.vint.vit import ViT
-from vint_train.models.nomad.nomad import NoMaD, DenseNetwork
-from vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
+from mbra.train.vint_train.models.vint.vit import ViT
+from mbra.train.vint_train.models.nomad.nomad import NoMaD, DenseNetwork
+from mbra.train.vint_train.models.nomad.nomad_vint import NoMaD_ViNT, replace_bn_with_gn
 #from diffusion_policy.model.diffusion.conditional_unet1d import ConditionalUnet1D
-from vint_train.data.data_utils import IMAGE_ASPECT_RATIO
+from mbra.train.vint_train.data.data_utils import IMAGE_ASPECT_RATIO
 
-from vint_train.models.lelan.lelan import LeLaN_clip, LeLaN_clip_temp, DenseNetwork_lelan
-from vint_train.models.lelan.lelan_comp import LeLaN_clip_FiLM, LeLaN_clip_FiLM_temp
-from vint_train.models.exaug.exaug import ExAug_dist_delay
-from vint_train.models.il.il import IL_dist, IL_gps
+from mbra.train.vint_train.models.lelan.lelan import LeLaN_clip, LeLaN_clip_temp, DenseNetwork_lelan
+from mbra.train.vint_train.models.lelan.lelan_comp import LeLaN_clip_FiLM, LeLaN_clip_FiLM_temp
+from mbra.train.vint_train.models.exaug.exaug import ExAug_dist_delay
+from mbra.train.vint_train.models.il.il import IL_dist, IL_gps
 
 import clip
 import cv2

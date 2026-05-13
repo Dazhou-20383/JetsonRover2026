@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 import os
 from glob import glob
 
-package_name = 'mbra_node'
+package_name = 'mbra'
 
 setup(
     name=package_name,
@@ -12,7 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
-        (os.path.join('share', package_name, 'config'), glob('mbra_node/train/config/*.yaml')),
+        (os.path.join('share', package_name, 'config'), glob('mbra/train/config/*.yaml')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,7 +27,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
-            'logonav_node = mbra_node.deployment.LogoNav_ros:main'
+            'logonav_node = mbra.deployment.LogoNav_ros:main'
         ],
     },
 )
