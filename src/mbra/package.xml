@@ -7,7 +7,21 @@
   <maintainer email="kevin20383sabis@gmail.com">boya</maintainer>
   <license>TODO: License declaration</license>
 
-  <depend>rclpy</depend>
+
+  <!-- ROS -->
+  <exec_depend>rclpy</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>sensor_msgs</exec_depend>
+  <exec_depend>cv_bridge</exec_depend>
+  <exec_depend>ament_index_python</exec_depend>
+
+  <!-- Python/system deps -->
+  <exec_depend>python3-numpy</exec_depend>
+  <exec_depend>python3-scipy</exec_depend>
+  <exec_depend>python3-pil</exec_depend>
+  <exec_depend>python3-yaml</exec_depend>
+  <exec_depend>python3-transforms3d</exec_depend>
+
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>
