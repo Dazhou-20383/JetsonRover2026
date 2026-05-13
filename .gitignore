@@ -10,3 +10,7 @@ train/vint_train/data/sampler
 train/config/LogoNav_.yaml
 download_youtube/videos
 .venv/
+src/mbra/mbra/deployment/latest
+build
+install
+log
