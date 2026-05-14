@@ -12,7 +12,11 @@ download_youtube/videos
 .venv/
 src/mbra/mbra/deployment/latest
 build
+build/
 install
+install/
 log
+log/
 *.pth
 *.deb
+.vscode/
