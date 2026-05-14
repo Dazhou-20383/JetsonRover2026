@@ -3,8 +3,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from typing import List, Dict, Optional, Tuple
 from efficientnet_pytorch import EfficientNet
-from vint_train.models.base_model import BaseModel
-from vint_train.models.vint.self_attention import MultiLayerDecoder, MultiLayerDecoder2
+from mbra.train.vint_train.models.base_model import BaseModel
+from mbra.train.vint_train.models.vint.self_attention import MultiLayerDecoder, MultiLayerDecoder2
 
 
 class ExAug_dist_delay(BaseModel):

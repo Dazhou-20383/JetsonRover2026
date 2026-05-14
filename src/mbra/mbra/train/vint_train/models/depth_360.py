@@ -1,7 +1,7 @@
 import torch
 import os
-import vint_train.training.networks as networks
-from vint_train.training.networks.layers import *
+import mbra.train.vint_train.training.networks as networks
+from mbra.train.vint_train.training.networks.layers import *
 
 class Depth_est:
     def __init__(self, h_size, w_size, bin_size, batch_img, device, aug):

@@ -30,7 +30,7 @@ plateau_factor: 0.5
 seed: 0
 
 # model params
-model_type: LogoNav
+model_type: il2_gps
 obs_encoding_size: 1024
 goal_encoding_size: 1024
 vision_encoder: nomad_vint

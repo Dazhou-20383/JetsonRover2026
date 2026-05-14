@@ -24,7 +24,7 @@ import numpy as np
 import math
 import transforms3d
 from transforms3d import quaternions
-from .utils_logonav import load_model, msg_to_pil, transform_images_mbra, to_numpy, clip_angle
+from .utils_logonav import load_model, transform_images_mbra, to_numpy, clip_angle
 from ament_index_python.packages import get_package_share_directory
 
 def msg_to_pil(msg: Image) -> PILImage.Image:
@@ -70,7 +70,12 @@ class MBRANode(Node):
         self.declare_parameter('model_weights_path', './model_weights/logonav.pth')
         self.declare_parameter('config_path', 'config/LogoNav.yaml')
         
-        ckpth_path = self.get_parameter('model_weights_path').get_parameter_value().string_value
+        ckpth_path_param = self.get_parameter('model_weights_path').get_parameter_value().string_value
+        if os.path.isabs(ckpth_path_param):
+            ckpth_path = ckpth_path_param
+        else:
+            script_dir = os.path.dirname(os.path.abspath(__file__))
+            ckpth_path = os.path.join(script_dir, ckpth_path_param)
         config_path_param = self.get_parameter('config_path').get_parameter_value().string_value
         
         try:
@@ -100,7 +105,7 @@ class MBRANode(Node):
         self.model = self.model.to(self.device)
         self.model.eval()
 
-        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # if local imports are still problematic
+        # sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # if local imports are still problematic
 
         self.img_sub = self.create_subscription(
             Image,
