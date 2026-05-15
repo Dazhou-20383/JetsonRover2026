@@ -1,6 +1,6 @@
 from setuptools import find_packages, setup
 
-package_name = 'camera'
+package_name = 'sensors'
 
 setup(
     name=package_name,
@@ -24,7 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
-                'camera_node = camera.camera_node:main',
+                'camera_node = sensors.camera_node:main',
+                'iphone_pose_node = sensors.iphone_pose_node:main',
         ],
     },
 )
