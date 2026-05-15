@@ -158,7 +158,8 @@ class MBRANode(Node):
             im = msg_to_pil(msg_1)
             #im_crop_o = im.crop((50, 100, 1230, 860)) #you may need to crop your raw camera image to be better performance.
             im_crop_o = im
-            im_crop = im_crop_o.resize(newsize, PILImage.Resampling.LANCZOS).convert('RGB')     
+            resample_filter = getattr(PILImage, "Resampling", PILImage).LANCZOS
+            im_crop = im_crop_o.resize(newsize, resample_filter).convert('RGB')     
 
             if self.init_hist == 0:
                 self.get_logger().info("init only")
