@@ -109,7 +109,7 @@ class MBRANode(Node):
 
         self.img_sub = self.create_subscription(
             Image,
-            '/usb_cam/image_raw',
+            '/camera/image_raw',
             self.img_sub_callback,
             10)
         self.pose_sub = self.create_subscription(

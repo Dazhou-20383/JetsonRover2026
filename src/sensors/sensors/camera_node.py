@@ -37,7 +37,7 @@ class CameraNode(Node):
         self.cap = cv2.VideoCapture(pipeline, cv2.CAP_GSTREAMER)
         
         self.bridge = CvBridge()
-        self.image_publisher = self.create_publisher(Image, '/camera/raw', 10)
+        self.image_publisher = self.create_publisher(Image, '/camera/image_raw', 10)
 
         self.timer = self.create_timer(0.03, self.send_frame)  # ~30 FPS
         self.publish_timer = self.create_timer(1.0, self.publish_frame)
