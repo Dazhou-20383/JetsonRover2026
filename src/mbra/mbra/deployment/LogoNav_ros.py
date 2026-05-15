@@ -104,7 +104,7 @@ class MBRANode(Node):
         )
         self.model = self.model.to(self.device)
         self.model.eval()
-
+        self.get_logger().info("Model loaded successfully.")
         # sys.path.insert(0, os.path.dirname(os.path.abspath(__file__))) # if local imports are still problematic
 
         self.img_sub = self.create_subscription(
