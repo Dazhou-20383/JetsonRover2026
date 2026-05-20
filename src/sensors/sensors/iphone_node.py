@@ -26,22 +26,6 @@ class IPhonePoseNode(Node):
             '/iphone/pose and /iphone/directions'
         )
 
-    @staticmethod
-    def yaw_to_direction(yaw: float) -> str:
-        directions = [
-            'east',
-            'north-east',
-            'north',
-            'north-west',
-            'west',
-            'south-west',
-            'south',
-            'south-east',
-        ]
-        normalized_yaw = yaw % (2.0 * math.pi)
-        index = int(((normalized_yaw + (math.pi / 8.0)) % (2.0 * math.pi)) / (math.pi / 4.0))
-        return directions[index]
-
     def poll_socket(self):
         try:
             data, _ = self.sock.recvfrom(4096)
@@ -49,6 +33,19 @@ class IPhonePoseNode(Node):
             return
 
         payload = json.loads(data.decode('utf-8'))
+        payload_type = payload.get('type')
+
+        if payload_type == 'route_guide':
+            self.publish_route_direction(payload)
+            return
+
+        if {'x', 'y', 'yaw'}.issubset(payload):
+            self.publish_pose(payload)
+            return
+
+        self.get_logger().debug(f'Ignoring unsupported payload: {payload}')
+
+    def publish_pose(self, payload):
         x = float(payload['x'])
         y = float(payload['y'])
         yaw = float(payload['yaw'])
@@ -66,8 +63,27 @@ class IPhonePoseNode(Node):
 
         self.publisher_pose.publish(msg)
 
+    def publish_route_direction(self, payload):
+        steps = payload.get('steps', [])
+        if not steps:
+            self.get_logger().debug('Received route_guide payload without actionable steps')
+            return
+
+        next_step = steps[0]
+        instruction = str(next_step.get('instruction', '')).strip()
+        if not instruction:
+            cardinal = str(next_step.get('cardinal', '')).strip()
+            distance_m = next_step.get('distance_m')
+            if cardinal and distance_m is not None:
+                instruction = f'{cardinal} for {distance_m} m'
+            elif cardinal:
+                instruction = cardinal
+            else:
+                self.get_logger().debug('Received route_guide step without direction text')
+                return
+
         direction_msg = String()
-        direction_msg.data = self.yaw_to_direction(yaw)
+        direction_msg.data = instruction
         self.publisher_directions.publish(direction_msg)
 
 
