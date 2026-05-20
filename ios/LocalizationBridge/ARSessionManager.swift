@@ -8,15 +8,16 @@ final class ARSessionManager: NSObject, ObservableObject, ARSessionDelegate {
     @Published private(set) var y: Float = 0
     @Published private(set) var yaw: Float = 0
     @Published private(set) var statusText: String = "Starting AR session..."
+    @Published private(set) var latestPoseText: String = "x=0.0000 y=0.0000 yaw=0.0000"
 
     let session = ARSession()
 
-    private let sender: PoseSender
+    private let networkManager: NetworkManager
     private let updateInterval: TimeInterval
     private var lastSentAt: TimeInterval = 0
 
-    init(host: String, port: UInt16 = 5005, targetHz: Double = 15) throws {
-        sender = try PoseSender(host: host, port: port)
+    init(networkManager: NetworkManager, targetHz: Double = 5) {
+        self.networkManager = networkManager
         updateInterval = 1.0 / max(targetHz, 1)
         super.init()
         session.delegate = self
@@ -48,12 +49,20 @@ final class ARSessionManager: NSObject, ObservableObject, ARSessionDelegate {
         lastSentAt = now
 
         let pose = Self.extractPose(from: frame.camera.transform)
+        let roundedPose = pose.roundedTo4Decimals()
 
         Task { @MainActor in
-            x = pose.x
-            y = pose.y
-            yaw = pose.yaw
-            sender.send(x: pose.x, y: pose.y, yaw: pose.yaw)
+            x = roundedPose.x
+            y = roundedPose.y
+            yaw = roundedPose.yaw
+            latestPoseText = Self.poseText(for: roundedPose)
+            do {
+                _ = try networkManager.sendMessage(
+                    PosePayload(x: roundedPose.x, y: roundedPose.y, yaw: roundedPose.yaw)
+                )
+            } catch {
+                statusText = error.localizedDescription
+            }
         }
     }
 
@@ -108,9 +117,31 @@ final class ARSessionManager: NSObject, ObservableObject, ARSessionDelegate {
 
         return PlanarPose(x: x, y: y, yaw: yaw)
     }
+
+    private static func poseText(for pose: PlanarPose) -> String {
+        String(format: "x=%.4f y=%.4f yaw=%.4f", pose.x, pose.y, pose.yaw)
+    }
 }
 
 private struct PlanarPose {
+    let x: Float
+    let y: Float
+    let yaw: Float
+
+    func roundedTo4Decimals() -> PlanarPose {
+        PlanarPose(
+            x: Self.rounded(x),
+            y: Self.rounded(y),
+            yaw: Self.rounded(yaw)
+        )
+    }
+
+    private static func rounded(_ value: Float) -> Float {
+        (value * 10_000).rounded() / 10_000
+    }
+}
+
+private struct PosePayload: Codable {
     let x: Float
     let y: Float
     let yaw: Float

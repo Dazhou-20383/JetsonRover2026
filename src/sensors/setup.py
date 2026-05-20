@@ -25,7 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
                 'camera_node = sensors.camera_node:main',
-                'iphone_pose_node = sensors.iphone_pose_node:main',
+                'iphone_node = sensors.iphone_node:main',
         ],
     },
 )
