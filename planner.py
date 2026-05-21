@@ -1,5 +1,6 @@
 from client import OllamaClient
 from prompts import agent_prompt, build_current_state_context
+from tools import tools
 
 client = OllamaClient()
 
@@ -11,8 +12,11 @@ messages = [
     ]
 
 completion = client.chat.completions.create(
-    model="Qwen/Qwen3.5-0.8B",
+    model="batiai/gemma4-e2b:q4",
     messages=messages,
+    tools=tools,
+    tool_choice="auto",
+    temperature=0.1,
 )
 
 print(completion.choices[0].message.content)

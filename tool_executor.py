@@ -66,10 +66,10 @@ class ToolExecutor:
 
     def place_waypoint_precise(self, loc_description: str):
         """
-        Places a precise waypoint based on visual scene understanding.
+        Places a precise waypoint based on visual scene understanding. 
         
-        * WHEN TO USE: In safety-critical locations (e.g., crosswalks) or for micromanuevers. Keep the target close.
-        * WHEN NOT TO USE: Do not place far away. Do not use without first grounding reasoning via observe().
+        * WHEN TO USE: In safety-critical locations (e.g., crosswalks) or for micromanuevers. Keep the target close. Always use grounded reasoning to ensure the target is safe.
+        * WHEN NOT TO USE: Do not place far away.
         * PARAMETERS:
             - loc_description (str): A highly detailed visual description of the target (e.g., "The tactile paving at the start of the crosswalk directly ahead").
         * YIELDS: The translated pixel coordinates of the waypoint and confirmation of placement.
