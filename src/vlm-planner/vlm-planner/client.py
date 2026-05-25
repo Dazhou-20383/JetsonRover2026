@@ -1,6 +1,5 @@
 from openai import OpenAI
 
-
 class OllamaClient:
     def __init__(self,
                  model="batiai/gemma4-e2b:q4",

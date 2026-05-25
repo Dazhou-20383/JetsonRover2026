@@ -16,7 +16,10 @@ class ActionServer(Node):
         # Route to mbra
         self.mbra_pub = self.create_publisher(Point, '/mbra/waypoints', 10)
         # TODO: get image for self.vlm.point_image()
+        # Setup a service with the camera_node to get the current image for precise waypoint placement
         
+        # TODO: get pose data for turn_towards()
+
         # client to rover controller
         self.stop_client = self.create_client(String, '/actions/stop')
         self.turn_client = self.create_client(Float32, '/actions/turn')
@@ -27,7 +30,6 @@ class ActionServer(Node):
         self.get_logger().info('Action Node has been started.')
 
         self.tools = {
-            'observe': self.observe,
             'stop': self.stop,
             'turn_right': self.turn_right,
             'turn_left': self.turn_left,
@@ -90,6 +92,7 @@ class ActionServer(Node):
         return future.result()
     
     def place_waypoint(self, x, y, **kwargs):
+        # TODO: transoform x, y from robot coordinates to world coordinates
         point = Point(x=x, y=y, z=0.0)
         self.mbra_pub.publish(point)
         future = self.mbra_client.call_async(Bool(data=True))
