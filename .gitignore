@@ -20,3 +20,4 @@ log/
 *.pth
 *.deb
 .vscode/
+.DS_Store

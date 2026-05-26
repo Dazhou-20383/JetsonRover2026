@@ -24,6 +24,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'motor_commands_to_arduino = actuators.motor_commands_to_arduino:main',
         ],
     },
 )
