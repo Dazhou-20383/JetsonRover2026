@@ -14,7 +14,10 @@ find_package(ament_cmake REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/Tool.srv"
+  "srv/Tool.srv"
+  "srv/Stop.srv"
+  "srv/Turn.srv"
+  "srv/EnableMBRA.srv"
 )
 
 if(BUILD_TESTING)
