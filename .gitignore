@@ -7,3 +7,5 @@ __pycache__/
 
 .vscode/
 cuda-keyring_1.1-1_all.deb
+src/mbra/mbra/deployment/latest
+src/mbra/mbra/deployment/model_weights
