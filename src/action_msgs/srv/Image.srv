@@ -1,0 +1,5 @@
+bool temp
+---
+bool success
+string error
+Image image

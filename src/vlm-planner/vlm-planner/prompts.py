@@ -51,4 +51,4 @@ def build_current_state_context(data):
 Current Pose: {current_pose}
 Current Waypoint: {current_waypoint}
 Current Observation: {current_observation}
-History: {history}""".format(data)
+History: {history}""".format(**data)

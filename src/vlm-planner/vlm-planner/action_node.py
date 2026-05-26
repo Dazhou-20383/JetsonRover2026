@@ -3,6 +3,7 @@ from rclpy.node import Node
 from std_msgs.msg import String, Float32, Bool
 from geometry_msgs.msg import Point, PoseStamped
 from action_msgs.srv import Tool
+from action_msgs.srv import Image as ImageSrv
 from action_msgs.srv import Stop as StopSrv, Turn as TurnSrv, EnableMBRA as EnableMBRASrv
 
 import json
@@ -19,6 +20,9 @@ class ActionServer(Node):
 
         # Route to mbra
         self.mbra_pub = self.create_publisher(Point, '/mbra/waypoints', 10)
+
+        # Route from camera
+        self.camera_client = self.create_client(ImageSrv, '/sensor/image')
 
         # Service clients for low-level rover commands. Use typed services defined in action_msgs.
         self.stop_client = self.create_client(StopSrv, '/actions/stop')
@@ -173,9 +177,11 @@ class ActionServer(Node):
         cannot be retrieved, `self.vlm.point_image` will be called with `None` and should handle that case.
         """
         self.get_logger().info(f'Locating described point: {loc_description}')
+        
+        img = self.camera_client.call(ImageSrv.Request()).image
 
         try:
-            x, y = self.vlm.point_image(None, loc_description)
+            x, y = self.vlm.point_image(img, loc_description)
         except Exception as e:
             self.get_logger().error(f'VLM point_image failed: {e}')
             raise
