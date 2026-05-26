@@ -24,6 +24,8 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'agent_node = vlm_planner.vlm_node:main',
+            'action_server = vlm_planner.action_node:main',
         ],
     },
 )
