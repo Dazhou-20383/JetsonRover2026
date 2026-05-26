@@ -1,3 +1,6 @@
+import base64
+import re
+import cv2
 from openai import OpenAI
 
 class OllamaClient:
@@ -33,5 +36,51 @@ class OllamaClient:
 
         return response.choices[0].message
     
-    def point_image(self, image, description):
-        raise NotImplementedError("point_image is not implemented yet. This function should take an image and a description of a point of interest, and return the coordinates of that point in the image.")
+    def point_image(self, image: str, description: str) -> tuple[int, int]:
+        """Point to a location in an image based on a text description.
+
+        Args: 
+            image (str): base64 encoded JPEG image string.
+            description (str): text description of the point to locate in the image.
+            
+        Returns:
+            (x, y) pixel coordinates of the described point, or (0, 0) if no point matches the description
+        """
+
+        if not image:
+            print("No image provided to point_image, returning (0, 0)")
+            return (0, 0)
+
+        image_url = f"data:image/jpeg;base64,{image}"
+
+        prompt = (
+            "Identify the single image point that best matches this description: "
+            f"{description}\n"
+            "Return only pixel coordinates in the exact format (x, y), where x is "
+            "horizontal from the left edge and y is vertical from the top edge. "
+            "If no point matches the description, return (0, 0)."
+        )
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_url}},
+                    ],
+                }
+            ],
+            temperature=0.1,
+            max_tokens=3200,
+        )
+
+        content = response.choices[0].message.content
+        match = re.search(r"\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)", content)
+        print(f"Model response content: '{content}'")
+        if not match:
+            print("No coordinates found in model response, returning (0, 0)")
+            print("Model response content was: '", content, "'")
+            return (0, 0)
+
+        return (int(round(float(match.group(1)))), int(round(float(match.group(2)))))

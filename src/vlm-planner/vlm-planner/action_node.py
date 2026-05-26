@@ -11,6 +11,10 @@ from typing import Any, Dict, Tuple
 
 from client import OllamaClient
 
+from cv_bridge import CvBridge, CvBridgeError
+import cv2
+import base64
+
 
 class ActionServer(Node):
     def __init__(self):
@@ -180,8 +184,19 @@ class ActionServer(Node):
         
         img = self.camera_client.call(ImageSrv.Request()).image
 
+        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+
+        # 2. Compress the image to JPEG memory buffer
+        success, encoded_image = cv2.imencode('.jpg', cv_image)
+        if not success:
+            self.get_logger().error('Failed to encode CV2 image to JPEG.')
+            return
+            
+        # 3. Convert the JPEG byte buffer to a base64 string
+        base64_image = base64.b64encode(encoded_image.tobytes()).decode('utf-8')
+        
         try:
-            x, y = self.vlm.point_image(img, loc_description)
+            x, y = self.vlm.point_image(base64_image, loc_description)
         except Exception as e:
             self.get_logger().error(f'VLM point_image failed: {e}')
             raise
