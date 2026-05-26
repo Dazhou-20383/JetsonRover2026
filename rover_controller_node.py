@@ -40,18 +40,24 @@ class RoverControllerNode(Node):
 
         self.publisher = self.create_publisher(Twist, '/motion/cmd_vel', 10)
 
+        self.pose_sub = self.create_subscription(
+
     def cmd_vel_callback(self, msg):
         self.mbra_linear = msg.linear.x
         self.mbra_angular = msg.angular.z
         self.get_logger().info(f"Received cmd_vel: linear_x={self.mbra_linear}, angular_z={self.mbra_angular}")
         
     def stop_callback(self, msg):
+        """Disable mbra and stop rover immediately."""
         self.action_linear = 0.0
         self.action_angular = 0.0
         self.get_logger().info("Received stop command, stopping the rover.")
 
     def turn_callback(self, msg):
-        pass
+        """Disable mbra and log the current orientation.
+           Calculate the target orientation.
+           Set angular velocity until pose enter desired range"""
+        
 
     def mbra_enable_callback(self, msg):
         pass
