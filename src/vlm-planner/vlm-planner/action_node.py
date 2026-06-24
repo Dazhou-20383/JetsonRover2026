@@ -1,7 +1,7 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Float32, Bool
-from geometry_msgs.msg import Point, PoseStamped
+from geometry_msgs.msg import Point, Pose2D
 from action_msgs.srv import Tool
 from action_msgs.srv import Image as ImageSrv
 from action_msgs.srv import Stop as StopSrv, Turn as TurnSrv, EnableMBRA as EnableMBRASrv
@@ -37,10 +37,11 @@ class ActionServer(Node):
         # Expecting a custom Pose2D message with x, y, yaw (radians)
         self.current_orientation = 0.0
         self.current_pose = {'x': 0.0, 'y': 0.0}
-        self.pose_sub = self.create_subscription(PoseStamped, '/robot/pose', self._pose_callback, 10)
+        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self._pose_callback, 10)
 
         # VLM client (language + vision model wrapper)
         self.vlm = OllamaClient()
+        self.bridge = CvBridge()
 
         self.get_logger().info('Action Node has been started.')
 

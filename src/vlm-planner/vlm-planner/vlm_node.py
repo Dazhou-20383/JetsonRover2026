@@ -1,8 +1,11 @@
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String
+from geometry_msgs.msg import Pose2D
+from sensor_msgs.msg import Image
 from action_msgs.srv import Tool
 import json
+import collections
 
 from agent import VLMAgent
 from client import OllamaClient
@@ -20,9 +23,9 @@ class VLMNode(Node):
         # run agent decision loop every 5 seconds
         self.timer = self.create_timer(5.0, self.run_agent)
 
-        self.instruction_sub = self.create_subscription( self.instruction_callback, 10)
-        self.pose_sub = self.create_subscription(self.pose_callback, 10)
-        self.observation_sub = self.create_subscription(self.observation_callback, 10)
+        self.instruction_sub = self.create_subscription(String, '/robot/directions', self.instruction_callback, 10)
+        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, 10)
+        self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, 10)
 
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
 
@@ -32,11 +35,8 @@ class VLMNode(Node):
             'current_pose': '',
             'current_waypoint': '',
             'current_observation': '',
-            'history': [],
+            'history': collections.deque(maxlen=2),
         }
-
-        # Start the agent loop
-        self.run_agent()
 
     def instruction_callback(self, msg):
         # TODO: split instruction into distance, direction, and landmark
@@ -74,16 +74,25 @@ class VLMNode(Node):
                         'tool_call_id': tool_call.id,
                         'content': json.dumps(result),
                     })
-                    self.current_state['history'].append({
+                    record = {
                         'tool': tool_call.function.name,
                         'args': self._tool_arguments(tool_call),
                         'result': result,
-                    })
+                    }
+                    self.current_state['history'].append(record)
+                    self.log_history_to_disk(record)
 
                 message = self.agent.client.get_response(self.agent.messages)
                 self.agent.messages.append(message)
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
+
+    def log_history_to_disk(self, record):
+        try:
+            with open('vlm_history.jsonl', 'a') as f:
+                f.write(json.dumps(record) + '\n')
+        except Exception as e:
+            self.get_logger().error(f'Failed to log history to disk: {e}')
 
     def execute_tool_call(self, tool_call):
         tool_name = tool_call.function.name
