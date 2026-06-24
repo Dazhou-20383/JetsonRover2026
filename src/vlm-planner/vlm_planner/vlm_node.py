@@ -7,10 +7,10 @@ from action_msgs.srv import Tool
 import json
 import collections
 
-from agent import VLMAgent
-from client import OllamaClient
+from .agent import VLMAgent
+from .client import OllamaClient
 
-from tools import tools
+from .tools import tools
 
 class VLMNode(Node):
     def __init__(self):
