@@ -10,14 +10,14 @@ class OllamaClient:
                  tools=None,
                  max_tokens=1024,
                  temperature=0.1, 
-                 reasoning_effort='none',
+                 think=False,
                  **kwargs):
         
         self.tools = tools or []
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
-        self.reasoning_effort = reasoning_effort
+        self.think = think
         
         self.client = OpenAI(base_url="http://localhost:11434/v1", api_key="not-needed", )
 

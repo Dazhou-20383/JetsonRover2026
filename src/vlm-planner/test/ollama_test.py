@@ -15,7 +15,7 @@ def test_get_response():
 
 def test_point_image():
     # Initialize the actual client
-    client = OllamaClient()
+    client = OllamaClient(model="qwen3.5:2b")
     
     # Load the dummy jpeg from example.jpeg
     image_path = os.path.join(os.path.dirname(__file__), "example.jpeg")
