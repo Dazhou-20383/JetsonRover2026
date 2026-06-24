@@ -5,7 +5,7 @@ from vlm_planner.tools import tools
 
 def test_get_response():
     # Initialize the actual client (Make sure Ollama is running at http://localhost:11434)
-    client = OllamaClient(model="qwen3.5:2b")
+    client = OllamaClient(model="qwen3.5:0.8b")
     
     # Test get_response
     messages = [{"role": "user", "content": "Reply with only the word 'Hello'"}]
@@ -15,7 +15,7 @@ def test_get_response():
 
 def test_point_image():
     # Initialize the actual client
-    client = OllamaClient(model="qwen3.5:2b")
+    client = OllamaClient(model="qwen3.5:0.8b")
     
     # Load the dummy jpeg from example.jpeg
     image_path = os.path.join(os.path.dirname(__file__), "example.jpeg")
@@ -30,7 +30,7 @@ def test_point_image():
     print(f"\nReal point returned: ({x}, {y})")
 
 def test_tool_use():
-    client = OllamaClient(tools=tools, model="qwen3.5:2b")
+    client = OllamaClient(tools=tools, model="qwen3.5:0.8b")
     messages = [{"role": "user", "content": "Place a waypoint at (1.0, 2.0)"}]
     response = client.get_response(messages)
     print("\nReal Ollama response with tool use:", response.content)
