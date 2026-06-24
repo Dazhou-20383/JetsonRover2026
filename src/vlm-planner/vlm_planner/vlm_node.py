@@ -27,7 +27,6 @@ class VLMNode(Node):
         self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, 10)
 
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
-        self.get_logger().info('VLM Client initialized.')
 
         self.agent = VLMAgent(vlm_client)
         self.current_state = {
