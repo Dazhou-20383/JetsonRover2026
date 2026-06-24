@@ -39,4 +39,11 @@ def test_tool_use():
 
 if __name__ == "__main__":
     test_get_response()
+    test_get_response()
+    print("finish text test")
     test_point_image()
+    test_point_image()
+    print("finish point image test")
+    test_tool_use()
+    test_tool_use()
+    print("finish tool use test")
