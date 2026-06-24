@@ -1,4 +1,4 @@
-from prompts import agent_prompt, build_current_state_context
+from .prompts import agent_prompt, build_current_state_context
 
 # place holder agent class for parsing the response and executing the tool calls
 class VLMAgent:

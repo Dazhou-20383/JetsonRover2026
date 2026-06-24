@@ -9,7 +9,7 @@ from action_msgs.srv import Stop as StopSrv, Turn as TurnSrv, EnableMBRA as Enab
 import json
 from typing import Any, Dict, Tuple
 
-from client import OllamaClient
+from .client import OllamaClient
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
