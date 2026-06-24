@@ -27,3 +27,7 @@ def test_point_image():
     x, y = client.point_image(dummy_base64, description)
  
     print(f"\nReal point returned: ({x}, {y})")
+
+if __name__ == "__main__":
+    test_get_response()
+    test_point_image()
