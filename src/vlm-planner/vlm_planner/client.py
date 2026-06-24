@@ -34,7 +34,6 @@ class OllamaClient:
             tool_choice="auto",
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            thinking=self.thinking,
             extra_body={"keep_alive": -1}
         )
 

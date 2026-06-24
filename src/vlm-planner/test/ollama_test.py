@@ -3,7 +3,7 @@ import base64
 from vlm_planner.client import OllamaClient
 from vlm_planner.tools import tools
 
-server_ip = os.environ.get("OLLAMA_SERVER_IP", "localhost")
+server_ip = os.environ.get("OLLAMA_SERVER_IP", "10.42.0.221")
 
 def test_get_response():
     # Initialize the actual client (Make sure Ollama is running at http://localhost:11434)
