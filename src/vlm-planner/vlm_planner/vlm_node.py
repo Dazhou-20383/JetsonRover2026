@@ -15,7 +15,6 @@ from .tools import tools
 class VLMNode(Node):
     def __init__(self):
         super().__init__('vlm_node')
-        self.get_logger().info('VLM Node has been started.')
 
         self.action_client = self.create_client(Tool, '/actions')
         self.max_tool_iterations = 4
@@ -28,6 +27,7 @@ class VLMNode(Node):
         self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, 10)
 
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
+        self.get_logger().info('VLM Client initialized.')
 
         self.agent = VLMAgent(vlm_client)
         self.current_state = {
@@ -37,6 +37,8 @@ class VLMNode(Node):
             'current_observation': '',
             'history': collections.deque(maxlen=2),
         }
+
+        self.get_logger().info('VLM Node has been started.')
 
     def instruction_callback(self, msg):
         # TODO: split instruction into distance, direction, and landmark
@@ -52,6 +54,7 @@ class VLMNode(Node):
         self.current_state['current_observation'] = msg.data
 
     def run_agent(self):
+        self.get_logger().info('Running agent decision loop...')
         if not self.current_state['instruction']:
             self.get_logger().debug('No instruction available; skipping agent tick.')
             return
