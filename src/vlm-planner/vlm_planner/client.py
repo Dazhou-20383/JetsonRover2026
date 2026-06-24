@@ -11,6 +11,7 @@ class OllamaClient:
                  max_tokens=1024,
                  temperature=0.1, 
                  think=False,
+                 server_ip="localhost",
                  **kwargs):
         
         self.tools = tools or []
@@ -19,7 +20,7 @@ class OllamaClient:
         self.temperature = temperature
         self.think = think
         
-        self.client = OpenAI(base_url="http://localhost:11434/v1", api_key="not-needed", )
+        self.client = OpenAI(base_url=f"http://{server_ip}:11434/v1", api_key="not-needed")
 
     def get_response(self, messages):
         normalized_messages = [
