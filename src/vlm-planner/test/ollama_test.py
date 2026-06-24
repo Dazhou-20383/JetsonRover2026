@@ -21,7 +21,7 @@ def test_point_image():
     image_path = os.path.join(os.path.dirname(__file__), "example.jpeg")
     with open(image_path, "rb") as image_file:
         dummy_base64 = base64.b64encode(image_file.read()).decode('utf-8')
-
+    print(dummy_base64[:100] + "...")  # Print the first 100 characters of the base64 string for verification
     description = "the white swan"
     
     # Test point_image using the real model
