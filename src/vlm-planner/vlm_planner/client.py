@@ -5,7 +5,7 @@ from openai import OpenAI
 
 class OllamaClient:
     def __init__(self,
-                 model="batiai/gemma4-e2b:q4",
+                 model="qwen3.5:2b",
                  tool_executor=None,
                  tools=None,
                  max_tokens=1024,
@@ -17,6 +17,7 @@ class OllamaClient:
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
+        self.thinking = thinking
         
         self.client = OpenAI(base_url="http://localhost:11434/v1", api_key="not-needed", )
 
@@ -32,6 +33,7 @@ class OllamaClient:
             tool_choice="auto",
             temperature=self.temperature,
             max_tokens=self.max_tokens,
+            thinking=self.thinking,
         )
 
         return response.choices[0].message
