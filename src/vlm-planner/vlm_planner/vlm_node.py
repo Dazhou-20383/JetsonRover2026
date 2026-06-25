@@ -26,8 +26,8 @@ class VLMNode(Node):
             reliability=ReliabilityPolicy.BEST_EFFORT
         )
 
-        self.instruction_sub = self.create_subscription(String, '/robot/directions', self.instruction_callback, qos_profile)
-        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, qos_profile)
+        self.instruction_sub = self.create_subscription(String, '/robot/directions', self.instruction_callback, 2)
+        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, 2)
         self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, qos_profile)
 
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
