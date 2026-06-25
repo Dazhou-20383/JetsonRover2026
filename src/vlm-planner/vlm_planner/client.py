@@ -57,11 +57,8 @@ class OllamaClient:
         image_url = f"data:image/jpeg;base64,{image}"
 
         prompt = (
-            "Identify the single image point that best matches this description: "
+            "Give the bounding box of"
             f"{description}\n"
-            "Return only pixel coordinates in the exact format (x, y), where x is "
-            "horizontal from the left edge and y is vertical from the top edge. "
-            "If no point matches the description, return (0, 0)."
         )
         response = self.client.chat.completions.create(
             model=self.model,
@@ -75,8 +72,8 @@ class OllamaClient:
                 }
             ],
             temperature=0.1,
-            max_tokens=30,
-            extra_body={"keep_alive": -1}
+            max_tokens=3000,
+            extra_body={"keep_alive": -1, "think": False}
         )
 
         content = response.choices[0].message.content
