@@ -80,7 +80,6 @@ class OllamaClient:
 
         content = response.choices[0].message.content
         match = re.search(r"\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)", content)
-        print(f"Model response content: '{content}'")
         if not match:
             print("No coordinates found in model response, returning (0, 0)")
             print("Model response content was: '", content, "'")
