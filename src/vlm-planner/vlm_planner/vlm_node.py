@@ -61,11 +61,11 @@ class VLMNode(Node):
         self.get_logger().info('Running agent decision loop...')
     
         try:
-
             if not self.current_state['instruction']:
                 self.get_logger().debug('No instruction available; skipping agent tick.')
                 time.sleep(1)
-                continue
+                self.create_timer(0.2, self.run_agent, one_shot=True)
+                return
     
             message = self.agent.run_agent(self.current_state)
 
@@ -74,7 +74,8 @@ class VLMNode(Node):
                 content = getattr(message, 'content', '') or ''
                 if content:
                     self.get_logger().info(f'Agent response: {content}')
-                break
+                self.create_timer(0.2, self.run_agent, one_shot=True)
+                return
 
             for tool_call in tool_calls:
                 self.get_logger().info(
