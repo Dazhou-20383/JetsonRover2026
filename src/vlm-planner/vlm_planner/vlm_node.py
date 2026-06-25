@@ -61,47 +61,49 @@ class VLMNode(Node):
         self.get_logger().info('Running agent decision loop...')
     
         try:
-            while True:
-                if not self.current_state['instruction']:
-                    self.get_logger().debug('No instruction available; skipping agent tick.')
-                    time.sleep(1)
-                    continue
-        
-                message = self.agent.run_agent(self.current_state)
 
-                tool_calls = getattr(message, 'tool_calls', None) or []
-                if not tool_calls:
-                    content = getattr(message, 'content', '') or ''
-                    if content:
-                        self.get_logger().info(f'Agent response: {content}')
-                    break
+            if not self.current_state['instruction']:
+                self.get_logger().debug('No instruction available; skipping agent tick.')
+                time.sleep(1)
+                continue
+    
+            message = self.agent.run_agent(self.current_state)
 
-                for tool_call in tool_calls:
-                    self.get_logger().info(
-                        f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
-                    )
-                    result = self.execute_tool_call(tool_call)
-                    self.get_logger().info(
-                        f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
-                    )
-                    self.agent.messages.append({
-                        'role': 'tool',
-                        'tool_call_id': tool_call.id,
-                        'content': json.dumps(result),
-                    })
-                    record = {
-                        'tool': tool_call.function.name,
-                        'args': self._tool_arguments(tool_call),
-                        'result': result,
-                    }
-                    self.current_state['history'].append(record)
-                    self.log_history_to_disk(record)
+            tool_calls = getattr(message, 'tool_calls', None) or []
+            if not tool_calls:
+                content = getattr(message, 'content', '') or ''
+                if content:
+                    self.get_logger().info(f'Agent response: {content}')
+                break
 
-                message = self.agent.client.get_response(self.agent.messages)
-                self.agent.messages.append(message)
+            for tool_call in tool_calls:
+                self.get_logger().info(
+                    f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
+                )
+                result = self.execute_tool_call(tool_call)
+                self.get_logger().info(
+                    f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
+                )
+                self.agent.messages.append({
+                    'role': 'tool',
+                    'tool_call_id': tool_call.id,
+                    'content': json.dumps(result),
+                })
+                record = {
+                    'tool': tool_call.function.name,
+                    'args': self._tool_arguments(tool_call),
+                    'result': result,
+                }
+                self.current_state['history'].append(record)
+                self.log_history_to_disk(record)
+
+            message = self.agent.client.get_response(self.agent.messages)
+            self.agent.messages.append(message)
 
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
+
+        self.create_timer(0.2, self.run_agent, one_shot=True)
 
     def log_history_to_disk(self, record):
         try:
