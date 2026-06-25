@@ -59,12 +59,17 @@ class VLMNode(Node):
 
     def run_agent(self):
         self.get_logger().info('Running agent decision loop...')
+        
+        if self.agent_timer is not None:
+            self.agent_timer.cancel()
+            self.destroy_timer(self.agent_timer) # Clean up memory
+            self.agent_timer = None
     
         try:
             if not self.current_state['instruction']:
                 self.get_logger().debug('No instruction available; skipping agent tick.')
                 time.sleep(1)
-                self.create_timer(0.2, self.run_agent, one_shot=True)
+                self._loop_agent()
                 return
     
             message = self.agent.run_agent(self.current_state)
@@ -74,7 +79,7 @@ class VLMNode(Node):
                 content = getattr(message, 'content', '') or ''
                 if content:
                     self.get_logger().info(f'Agent response: {content}')
-                self.create_timer(0.2, self.run_agent, one_shot=True)
+                self._loop_agent()
                 return
 
             for tool_call in tool_calls:
@@ -104,7 +109,7 @@ class VLMNode(Node):
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
 
-        self.create_timer(0.2, self.run_agent, one_shot=True)
+        self._loop_agent()
 
     def log_history_to_disk(self, record):
         try:
@@ -144,6 +149,9 @@ class VLMNode(Node):
         if isinstance(arguments, str):
             return json.loads(arguments) if arguments else {}
         return arguments
+    
+    def _loop_agent(self):
+        self.agent_timer = self.create_timer(0.2, self.run_agent)
 
 
 def main(args=None):
