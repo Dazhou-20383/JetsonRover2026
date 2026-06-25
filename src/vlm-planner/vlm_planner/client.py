@@ -109,7 +109,7 @@ class OllamaClient:
 
         return (int(round(float(match.group(1)))), int(round(float(match.group(2)))))
     
-    def build_current_state_context(state):
+    def build_current_state_context(self, state):
         # This function should build the current state context string based on the input data.
         # For demonstration purposes, we will return a placeholder string.
         return """Instruction: {instruction}
