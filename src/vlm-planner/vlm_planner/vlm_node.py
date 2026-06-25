@@ -59,13 +59,12 @@ class VLMNode(Node):
         self.current_state['current_observation'] = msg.data
 
     def run_agent(self):
-        self.get_logger().info('Running agent decision loop...')
-        
         if self.agent_timer is not None:
             self.agent_timer.cancel()
             self.destroy_timer(self.agent_timer) # Clean up memory
             self.agent_timer = None
     
+        self.get_logger().info('Running agent decision loop...')
         try:
             if not self.current_state['instruction']:
                 self.get_logger().debug('No instruction available; skipping agent tick.')
