@@ -12,7 +12,7 @@ class VLMAgent:
             {"role": "system", "content": agent_prompt},
             {"role": "user", "content": build_current_state_context(current_state)},
         ]
-
+        print("\nCurrent state context sent to the model:", self.messages[-1]["content"])
         output = self.client.get_response(self.messages)
 
         self.messages.append(output)

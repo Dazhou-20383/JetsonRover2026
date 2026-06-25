@@ -7,6 +7,7 @@ from sensor_msgs.msg import Image
 from action_msgs.srv import Tool
 import json
 import collections
+import time
 
 from .agent import VLMAgent
 from .client import OllamaClient
@@ -58,12 +59,14 @@ class VLMNode(Node):
 
     def run_agent(self):
         self.get_logger().info('Running agent decision loop...')
-        if not self.current_state['instruction']:
-            self.get_logger().debug('No instruction available; skipping agent tick.')
-            return
     
         try:
             while True:
+                if not self.current_state['instruction']:
+                    self.get_logger().debug('No instruction available; skipping agent tick.')
+                    time.sleep(1)
+                    continue
+        
                 message = self.agent.run_agent(self.current_state)
 
                 tool_calls = getattr(message, 'tool_calls', None) or []
