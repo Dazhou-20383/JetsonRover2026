@@ -54,7 +54,7 @@ class VLMNode(Node):
 
     def observation_callback(self, msg):
         self.get_logger().info(f'Received observation')
-        self.current_state['current_observation'] = msg.data
+        self.current_state['current_observation'] = msg
 
     def run_agent(self):
         if self.agent_timer is not None:
