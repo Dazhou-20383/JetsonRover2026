@@ -6,8 +6,7 @@ from vlm_planner.tools import tools
 server_ip = os.environ.get("OLLAMA_SERVER_IP", "10.42.0.221")
 
 def test_get_response():
-    # Initialize the actual client (Make sure Ollama is running at http://localhost:11434)
-    client = OllamaClient(model="qwen3.5:0.8b", server_ip=server_ip)
+    client = OllamaClient(model="qwen3.5:2b", server_ip=server_ip)
     
     # Test get_response
     messages = [{"role": "user", "content": "Reply with only the word 'Hello'"}]
@@ -17,7 +16,7 @@ def test_get_response():
 
 def test_point_image():
     # Initialize the actual client
-    client = OllamaClient(model="qwen3.5:0.8b", server_ip=server_ip)
+    client = OllamaClient(model="qwen3.5:2b", server_ip=server_ip)
     
     # Load the dummy jpeg from example.jpeg
     image_path = os.path.join(os.path.dirname(__file__), "example.jpeg")
