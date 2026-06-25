@@ -1,4 +1,5 @@
 import rclpy
+from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose2D
@@ -17,14 +18,16 @@ class VLMNode(Node):
         super().__init__('vlm_node')
 
         self.action_client = self.create_client(Tool, '/actions')
-        self.max_tool_iterations = 4
 
-        # run agent decision loop every 5 seconds
-        self.timer = self.create_timer(5.0, self.run_agent)
+        qos_profile = QoSProfile(
+            history=HistoryPolicy.KEEP_LAST,
+            depth=1,
+            reliability=ReliabilityPolicy.BEST_EFFORT
+        )
 
-        self.instruction_sub = self.create_subscription(String, '/robot/directions', self.instruction_callback, 10)
-        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, 10)
-        self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, 10)
+        self.instruction_sub = self.create_subscription(String, '/robot/directions', self.instruction_callback, qos_profile)
+        self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, qos_profile)
+        self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, qos_profile)
 
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
 
@@ -34,10 +37,11 @@ class VLMNode(Node):
             'current_pose': '',
             'current_waypoint': '',
             'current_observation': '',
-            'history': collections.deque(maxlen=2),
+            'history': collections.deque(maxlen=4),
         }
-
+        
         self.get_logger().info('VLM Node has been started.')
+        self.run_agent()
 
     def instruction_callback(self, msg):
         # TODO: split instruction into distance, direction, and landmark
@@ -57,11 +61,11 @@ class VLMNode(Node):
         if not self.current_state['instruction']:
             self.get_logger().debug('No instruction available; skipping agent tick.')
             return
-
+    
         try:
-            message = self.agent.run_agent(self.current_state)
+            while True:
+                message = self.agent.run_agent(self.current_state)
 
-            for _ in range(self.max_tool_iterations):
                 tool_calls = getattr(message, 'tool_calls', None) or []
                 if not tool_calls:
                     content = getattr(message, 'content', '') or ''
@@ -70,7 +74,13 @@ class VLMNode(Node):
                     break
 
                 for tool_call in tool_calls:
+                    self.get_logger().info(
+                        f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
+                    )
                     result = self.execute_tool_call(tool_call)
+                    self.get_logger().info(
+                        f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
+                    )
                     self.agent.messages.append({
                         'role': 'tool',
                         'tool_call_id': tool_call.id,
@@ -86,6 +96,7 @@ class VLMNode(Node):
 
                 message = self.agent.client.get_response(self.agent.messages)
                 self.agent.messages.append(message)
+
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
 
