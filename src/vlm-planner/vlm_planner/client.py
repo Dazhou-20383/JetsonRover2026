@@ -34,7 +34,7 @@ class OllamaClient:
             tool_choice="auto",
             temperature=self.temperature,
             max_tokens=self.max_tokens,
-            extra_body={"keep_alive": -1, "think": False}
+            extra_body={"keep_alive": -1}
         )
 
         return response.choices[0].message
@@ -72,8 +72,9 @@ class OllamaClient:
                 }
             ],
             temperature=0.1,
-            max_tokens=3000,
-            extra_body={"keep_alive": -1, "think": False}
+            max_tokens=300,
+            reasoning_effort="none",
+            extra_body={"keep_alive": -1}
         )
 
         content = response.choices[0].message.content
