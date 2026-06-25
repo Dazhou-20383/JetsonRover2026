@@ -33,6 +33,7 @@ class VLMNode(Node):
         vlm_client = OllamaClient(tools=tools, max_tokens=512)
 
         self.agent = VLMAgent(vlm_client)
+        self.agent_timer = None
         self.current_state = {
             'instruction': '',
             'current_pose': '',
