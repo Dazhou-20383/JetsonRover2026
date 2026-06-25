@@ -28,18 +28,22 @@ class OllamaClient:
 
     def get_response(self, state):
 
-        base64_image = self.ros2_image_to_base64(state['current_observation'])
+        img = state['current_observation']
+        base64_image = self.ros2_image_to_base64(img)
         img_url = f"data:image/jpeg;base64,{base64_image}"
+
+        state_context = self.build_current_state_context(state)
 
         messages = [
             {"role": "system", "content": agent_prompt},
             {"role": "user", "content": [
-                {"type": "text", "text": self.build_current_state_context(state)},
+                {"type": "text", "text": state_context},
                 {"type": "image_url", "image_url": {"url": img_url}},
                 ]
             },
         ]
-        print("\nCurrent state context sent to the model:", messages[-1]["content"])
+        print("\nCurrent state context sent to the model:", state_context)
+        print(f"observation size: {img.width} x {img.height}")
         output = self.send_request(messages)
 
         return output

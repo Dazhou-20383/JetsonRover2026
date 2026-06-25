@@ -36,7 +36,7 @@ class VLMNode(Node):
             'instruction': '',
             'current_pose': '',
             'current_waypoint': '',
-            'current_observation': '',
+            'current_observation': None,
             'history': collections.deque(maxlen=4),
         }
         
@@ -64,7 +64,7 @@ class VLMNode(Node):
     
         self.get_logger().info('Running agent decision loop...')
         try:
-            if not self.current_state['instruction']:
+            if not self.current_state['instruction'] or self.current_state['current_observation'] is None:
                 self.get_logger().debug('No instruction available; skipping agent tick.')
                 time.sleep(1)
                 self._loop_agent()
