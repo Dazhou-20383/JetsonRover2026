@@ -27,7 +27,6 @@ class OllamaClient:
         self.client = OpenAI(base_url=f"http://{server_ip}:11434/v1", api_key="not-needed")
 
     def get_response(self, state):
-
         img = state['current_observation']
         base64_image = self.ros2_image_to_base64(img)
         img_url = f"data:image/jpeg;base64,{base64_image}"
@@ -43,7 +42,6 @@ class OllamaClient:
             },
         ]
         print("\nCurrent state context sent to the model:", state_context)
-        print(f"observation size: {img.width} x {img.height}")
         output = self.send_request(messages)
 
         return output

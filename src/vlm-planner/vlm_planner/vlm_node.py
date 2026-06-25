@@ -73,12 +73,11 @@ class VLMNode(Node):
             message = self.client.get_response(self.current_state)
 
             tool_calls = getattr(message, 'tool_calls', None) or []
-            if not tool_calls:
-                content = getattr(message, 'content', '') or ''
-                if content:
-                    self.get_logger().info(f'Agent response: {content}')
-                self._loop_agent()
-                return
+
+            history = {
+                'tool': [],
+                'content': "",
+                }
 
             for tool_call in tool_calls:
                 self.get_logger().info(
@@ -93,16 +92,23 @@ class VLMNode(Node):
                     'tool_call_id': tool_call.id,
                     'content': json.dumps(result),
                 })
-                record = {
+
+                tool_record = {
                     'tool': tool_call.function.name,
                     'args': self._tool_arguments(tool_call),
                     'result': result,
                 }
-                self.current_state['history'].append(record)
-                self.log_history_to_disk(record)
 
-            message = self.agent.client.get_response(self.agent.messages)
-            self.agent.messages.append(message)
+                history['tool'].append(tool_record)
+            
+            content = getattr(message, 'content', '') or ''
+            if content:
+                history['content'] = content
+
+            self.current_state['history'].append(history)
+            self.get_logger().info(f"Agent history: {history}")
+            self.log_history_to_disk(history)
+
 
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
