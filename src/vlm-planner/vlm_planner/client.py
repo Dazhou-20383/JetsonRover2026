@@ -1,7 +1,10 @@
 import base64
 import re
 import cv2
+from cv_bridge import CvBridge
+from sensor_msgs.msg import Image
 from openai import OpenAI
+from .prompts import agent_prompt
 
 class OllamaClient:
     def __init__(self,
@@ -20,9 +23,28 @@ class OllamaClient:
         self.temperature = temperature
         self.think = think
         
+        self.bridge = CvBridge()
         self.client = OpenAI(base_url=f"http://{server_ip}:11434/v1", api_key="not-needed")
 
-    def get_response(self, messages):
+    def get_response(self, state):
+
+        base64_image = self.ros2_image_to_base64(state['current_observation'])
+        img_url = f"data:image/jpeg;base64,{base64_image}"
+
+        messages = [
+            {"role": "system", "content": agent_prompt},
+            {"role": "user", "content": [
+                {"type": "text", "text": self.build_current_state_context(state)},
+                {"type": "image_url", "image_url": {"url": img_url}},
+                ]
+            },
+        ]
+        print("\nCurrent state context sent to the model:", messages[-1]["content"])
+        output = self.send_request(messages)
+
+        return output
+
+    def send_request(self, messages):
         normalized_messages = [
             message.model_dump(exclude_none=True) if hasattr(message, 'model_dump') else message
             for message in messages
@@ -86,3 +108,28 @@ class OllamaClient:
             return (0, 0)
 
         return (int(round(float(match.group(1)))), int(round(float(match.group(2)))))
+    
+    def build_current_state_context(state):
+        # This function should build the current state context string based on the input data.
+        # For demonstration purposes, we will return a placeholder string.
+        return """Instruction: {instruction}
+            Current Pose: {current_pose}
+            Current Waypoint: {current_waypoint}
+            History: {history}""".format(**state)
+
+    def ros2_image_to_base64(self, ros_image: Image) -> str:
+        """Converts a ROS2 Image message to a Base64 encoded string."""
+        # 2. Convert ROS2 Image to OpenCV Image (BGR format)
+        cv_img = self.bridge.imgmsg_to_cv2(ros_image, desired_encoding='bgr8')
+        
+        # 3. Compress the OpenCV image into a JPEG buffer
+        # Change '.jpg' to '.png' if you need lossless compression
+        success, encoded_image = cv2.imencode('.jpg', cv_img)
+        if not success:
+            raise ValueError("Failed to compress OpenCV image to JPEG format")
+            
+        # 4. Convert the buffer to bytes and then to a Base64 string
+        byte_data = encoded_image.tobytes()
+        base64_string = base64.b64encode(byte_data).decode('utf-8')
+        
+        return base64_string

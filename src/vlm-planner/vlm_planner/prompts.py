@@ -20,12 +20,3 @@ You must structure your response using a strictly formatted Thought and Action l
 Thought: [1-2 sentences evaluating the current state, safety, and goal]
 Use standard format to specify your action (tool call)
 """
-
-def build_current_state_context(data):
-    # This function should build the current state context string based on the input data.
-    # For demonstration purposes, we will return a placeholder string.
-    return """Instruction: {instruction}
-Current Pose: {current_pose}
-Current Waypoint: {current_waypoint}
-Current Observation: {current_observation}
-History: {history}""".format(**data)

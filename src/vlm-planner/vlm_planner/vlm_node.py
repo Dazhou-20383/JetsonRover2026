@@ -9,7 +9,6 @@ import json
 import collections
 import time
 
-from .agent import VLMAgent
 from .client import OllamaClient
 
 from .tools import tools
@@ -30,9 +29,8 @@ class VLMNode(Node):
         self.pose_sub = self.create_subscription(Pose2D, '/robot/pose', self.pose_callback, 2)
         self.observation_sub = self.create_subscription(Image, '/camera/image_raw', self.observation_callback, qos_profile)
 
-        vlm_client = OllamaClient(tools=tools, max_tokens=512)
+        self.client = OllamaClient(tools=tools, max_tokens=512)
 
-        self.agent = VLMAgent(vlm_client)
         self.agent_timer = None
         self.current_state = {
             'instruction': '',
@@ -55,7 +53,7 @@ class VLMNode(Node):
         self.current_state['current_pose'] = msg.data
 
     def observation_callback(self, msg):
-        self.get_logger().info(f'Received observation: {msg.data}')
+        self.get_logger().info(f'Received observation')
         self.current_state['current_observation'] = msg.data
 
     def run_agent(self):
@@ -71,8 +69,8 @@ class VLMNode(Node):
                 time.sleep(1)
                 self._loop_agent()
                 return
-    
-            message = self.agent.run_agent(self.current_state)
+            
+            message = self.client.get_response(self.current_state)
 
             tool_calls = getattr(message, 'tool_calls', None) or []
             if not tool_calls:
