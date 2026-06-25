@@ -78,20 +78,21 @@ class VLMNode(Node):
                 'tool': [],
                 'content': "",
                 }
+            
+            content = getattr(message, 'content', '') or ''
+            if content:
+                history['content'] = content
+            self.get_logger().info(f"Agent response: {content}")
 
             for tool_call in tool_calls:
                 self.get_logger().info(
                     f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
                 )
                 result = self.execute_tool_call(tool_call)
+                
                 self.get_logger().info(
                     f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
                 )
-                self.agent.messages.append({
-                    'role': 'tool',
-                    'tool_call_id': tool_call.id,
-                    'content': json.dumps(result),
-                })
 
                 tool_record = {
                     'tool': tool_call.function.name,
@@ -100,13 +101,8 @@ class VLMNode(Node):
                 }
 
                 history['tool'].append(tool_record)
-            
-            content = getattr(message, 'content', '') or ''
-            if content:
-                history['content'] = content
 
             self.current_state['history'].append(history)
-            self.get_logger().info(f"Agent history: {history}")
             self.log_history_to_disk(history)
 
 
@@ -127,7 +123,7 @@ class VLMNode(Node):
         args = self._tool_arguments(tool_call)
 
         if tool_name == 'observe':
-            return {'observation': self.current_state['current_observation']}
+            return {'observation': "some image"}
 
         if not self.action_client.wait_for_service(timeout_sec=0.5):
             raise RuntimeError('Action service /actions is not available')
