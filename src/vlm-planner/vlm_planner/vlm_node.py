@@ -118,7 +118,7 @@ class VLMNode(Node):
         except Exception as e:
             self.get_logger().error(f'Failed to log history to disk: {e}')
 
-    def execute_tool_call(self, tool_call):
+    def execute_tool_call(self, tool_call, timeout=5.0):
         tool_name = tool_call.function.name
         args = self._tool_arguments(tool_call)
 
@@ -130,12 +130,14 @@ class VLMNode(Node):
         request.args_json = json.dumps(args)
 
         future = self.action_client.call_async(request)
-        rclpy.spin_until_future_complete(self, future, timeout_sec=5.0)
-
-        if not future.done():
-            raise TimeoutError(f'Action service timed out for {tool_name}')
+        start = time.time()
+        while not future.done():
+            rclpy.spin_once(self, timeout_sec=0.1)
+            if time.time() - start > timeout:
+                raise TimeoutError(f'Action service timed out for {tool_name}')
 
         response = future.result()
+        
         if not response.success:
             raise RuntimeError(response.error or f'Action {tool_name} failed')
 
