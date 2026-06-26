@@ -1,5 +1,8 @@
 import rclpy
 from rclpy.node import Node
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
+
 from geometry_msgs.msg import Point, Pose2D
 from action_msgs.srv import Tool
 from action_msgs.srv import ImageSrv, StopSrv, TurnSrv, EnableMBRASrv
@@ -18,18 +21,20 @@ class ActionServer(Node):
     def __init__(self):
         super().__init__('action_node')
         # Service to receive high level tool requests
-        self.action_srv = self.create_service(Tool, '/actions', self.action_handler)
+        self.client_cb_group = ReentrantCallbackGroup()
+        self.action_srv = self.create_service(Tool, '/actions', self.action_handler, 
+                                              callback_group=self.client_cb_group)
 
         # Route to mbra
         self.mbra_pub = self.create_publisher(Point, '/mbra/waypoints', 10)
 
         # Route from camera
-        self.camera_client = self.create_client(ImageSrv, '/sensor/image')
+        self.camera_client = self.create_client(ImageSrv, '/sensor/image', callback_group=self.client_cb_group)
 
         # Service clients for low-level rover commands. Use typed services defined in action_msgs.
-        self.stop_client = self.create_client(StopSrv, '/actions/stop')
-        self.turn_client = self.create_client(TurnSrv, '/actions/turn')
-        self.mbra_client = self.create_client(EnableMBRASrv, '/actions/enable_mbra')
+        self.stop_client = self.create_client(StopSrv, '/actions/stop', callback_group=self.client_cb_group)
+        self.turn_client = self.create_client(TurnSrv, '/actions/turn', callback_group=self.client_cb_group)
+        self.mbra_client = self.create_client(EnableMBRASrv, '/actions/enable_mbra', callback_group=self.client_cb_group)
 
         # Pose subscription used to compute relative turns
         # Expecting a custom Pose2D message with x, y, yaw (radians)
@@ -141,8 +146,7 @@ class ActionServer(Node):
         direction = float(direction)
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
-            self.get_logger().error(msg)
-            return {'success': False, 'error': msg}
+            raise RuntimeError(msg)
 
         req = TurnSrv.Request()
         req.orientation = direction
@@ -216,8 +220,10 @@ class ActionServer(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = ActionServer()
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:

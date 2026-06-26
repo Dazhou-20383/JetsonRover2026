@@ -1,5 +1,7 @@
 import rclpy
 from rclpy.qos import QoSProfile, HistoryPolicy, ReliabilityPolicy
+from rclpy.callback_groups import ReentrantCallbackGroup
+from rclpy.executors import MultiThreadedExecutor
 from rclpy.node import Node
 from std_msgs.msg import String
 from geometry_msgs.msg import Pose2D
@@ -17,7 +19,8 @@ class VLMNode(Node):
     def __init__(self):
         super().__init__('vlm_node')
 
-        self.action_client = self.create_client(Tool, '/actions')
+        self.client_cb_group = ReentrantCallbackGroup()
+        self.action_client = self.create_client(Tool, '/actions', callback_group=self.client_cb_group)
 
         qos_profile = QoSProfile(
             history=HistoryPolicy.KEEP_LAST,
@@ -137,7 +140,7 @@ class VLMNode(Node):
                 raise TimeoutError(f'Action service timed out for {tool_name}')
 
         response = future.result()
-        
+
         if not response.success:
             raise RuntimeError(response.error or f'Action {tool_name} failed')
 
@@ -156,8 +159,10 @@ class VLMNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     node = VLMNode()
+    executor = MultiThreadedExecutor(num_threads=4)
+    executor.add_node(node)
     try:
-        rclpy.spin(node)
+        executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
