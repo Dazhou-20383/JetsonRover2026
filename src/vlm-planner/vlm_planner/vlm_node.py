@@ -10,6 +10,7 @@ from action_msgs.srv import Tool
 import json
 import collections
 import time
+import threading
 
 from .client import OllamaClient
 
@@ -61,9 +62,13 @@ class VLMNode(Node):
 
     def run_agent(self):
         if self.agent_timer is not None:
-            self.agent_timer.cancel()
-            self.destroy_timer(self.agent_timer) # Clean up memory
-            self.agent_timer = None
+            try:
+                self.agent_timer.cancel()
+                self.destroy_timer(self.agent_timer)
+            except Exception:
+                self.get_logger().debug('Timer already cancelled/destroyed')
+            finally:
+                self.agent_timer = None
     
         self.get_logger().info('Running agent decision loop...')
         try:
@@ -131,11 +136,11 @@ class VLMNode(Node):
         request.args_json = json.dumps(args)
 
         future = self.action_client.call_async(request)
-        start = time.time()
-        while not future.done():
-            rclpy.spin_once(self, timeout_sec=0.1)
-            if time.time() - start > timeout:
-                raise TimeoutError(f'Action service timed out for {tool_name}')
+        done_event = threading.Event()
+        future.add_done_callback(lambda f: done_event.set())
+
+        if not done_event.wait(timeout):
+            raise TimeoutError(f'Tool call {tool_name} timed out after {timeout} seconds')
 
         response = future.result()
 
@@ -148,7 +153,7 @@ class VLMNode(Node):
         return arguments
     
     def _loop_agent(self):
-        self.agent_timer = self.create_timer(0.2, self.run_agent, callback_group=self.client_cb_group)
+        self.agent_timer = self.create_timer(0.2, self.run_agent)
 
 
 def main(args=None):

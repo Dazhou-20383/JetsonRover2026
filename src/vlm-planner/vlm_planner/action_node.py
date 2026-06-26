@@ -9,6 +9,7 @@ from action_msgs.srv import ImageSrv, StopSrv, TurnSrv, EnableMBRASrv
 
 import json
 from typing import Any, Dict, Tuple
+import threading
 
 from .client import OllamaClient
 
@@ -106,9 +107,7 @@ class ActionServer(Node):
         req = StopSrv.Request()
         req.command = kwargs.get('command', 'stop')
 
-        future = self.stop_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
 
     def turn_right(self, degrees: float = 60.0, **kwargs) -> Dict[str, Any]:
@@ -121,9 +120,7 @@ class ActionServer(Node):
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
 
-        future = self.turn_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
 
     def turn_left(self, degrees: float = 60.0, **kwargs) -> Dict[str, Any]:
@@ -136,9 +133,7 @@ class ActionServer(Node):
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
 
-        future = self.turn_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
 
     def turn_towards(self, direction: float, **kwargs) -> Dict[str, Any]:
@@ -151,9 +146,7 @@ class ActionServer(Node):
         req = TurnSrv.Request()
         req.orientation = direction
 
-        future = self.turn_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
     
     def place_waypoint(self, x: float, y: float, **kwargs) -> Dict[str, Any]:
@@ -169,9 +162,8 @@ class ActionServer(Node):
 
         req = EnableMBRASrv.Request()
         req.enable = True
-        future = self.mbra_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'point': {'x': point.x, 'y': point.y}}
 
     def place_waypoint_precise(self, loc_description: str, **kwargs) -> Dict[str, Any]:
@@ -211,11 +203,16 @@ class ActionServer(Node):
 
         req = EnableMBRASrv.Request()
         req.enable = True
-        future = self.mbra_client.call_async(req)
-        rclpy.spin_until_future_complete(self, future)
-        res = future.result()
+        res = self._call_and_wait(self.turn_client, req)
         return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'point': {'x': point.x, 'y': point.y}}
 
+    def _call_and_wait(self, client, request, timeout=2.0):
+        future = client.call_async(request)
+        done_event = threading.Event()
+        future.add_done_callback(lambda f: done_event.set())
+        if not done_event.wait(timeout=timeout):
+            raise TimeoutError('Service call timed out')
+        return future.result()
     
 def main(args=None):
     rclpy.init(args=args)
