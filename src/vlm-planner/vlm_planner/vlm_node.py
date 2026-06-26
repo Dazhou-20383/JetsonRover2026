@@ -75,7 +75,7 @@ class VLMNode(Node):
 
             content = getattr(message, 'content', '') or ''
             if content:
-                self.current_state['history'].append({"role": "system", "content": content})
+                self.current_state['history'].append({"role": "assistant", "content": content})
             self.get_logger().info(f"Agent response: {content}")
 
             tool_calls = getattr(message, 'tool_calls', None) or []
