@@ -1,16 +1,16 @@
 tools = [
-  {
-    "type": "function",
-    "function": {
-      "name": "observe",
-      "description": "Retrieves a wider, detailed field-of-view of the surroundings. Use this to find specific paths or signs, resolve uncertainty, or verify traffic lights at intersections. Do not use during routine, safe navigation on clear paths. Returns a large image of surrounding objects, hazards, and environmental states.",
-      "parameters": {
-        "type": "object",
-        "properties": {},
-        "required": [],
-      }
-    }
-  },
+  # {
+  #   "type": "function",
+  #   "function": {
+  #     "name": "observe",
+  #     "description": "Retrieves a wider, detailed field-of-view of the surroundings. Use this to find specific paths or signs, resolve uncertainty, or verify traffic lights at intersections. Do not use during routine, safe navigation on clear paths. Returns a large image of surrounding objects, hazards, and environmental states.",
+  #     "parameters": {
+  #       "type": "object",
+  #       "properties": {},
+  #       "required": [],
+  #     }
+  #   }
+  # },
   {
     "type": "function",
     "function": {

@@ -86,11 +86,11 @@ class ActionServer(Node):
         return response
 
     def _pose_callback(self, msg) -> None:
-        """Pose handler expecting `Pose2D` with `x`, `y`, `yaw` (radians)."""
+        """Pose handler expecting `Pose2D` with `x`, `y`, `theta` (radians)."""
         try:
             self.current_pose['x'] = float(msg.x)
             self.current_pose['y'] = float(msg.y)
-            self.current_orientation = float(msg.yaw)
+            self.current_orientation = float(msg.theta)
         except Exception:
             self.get_logger().debug('Received malformed Pose2D; keeping previous pose')
     
@@ -99,7 +99,7 @@ class ActionServer(Node):
         if not self.stop_client.wait_for_service(timeout_sec=1.0):
             msg = 'Stop service not available'
             self.get_logger().error(msg)
-            raise RuntimeError(msg)
+            return {'success': False, 'error': msg}
 
         req = StopSrv.Request()
         req.command = kwargs.get('command', 'stop')
@@ -115,7 +115,7 @@ class ActionServer(Node):
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
             self.get_logger().error(msg)
-            raise RuntimeError(msg)
+            return {'success': False, 'error': msg}
 
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
@@ -123,7 +123,7 @@ class ActionServer(Node):
         future = self.turn_client.call_async(req)
         rclpy.spin_until_future_complete(self, future)
         res = future.result()
-        return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'target_orientation': target_orientation}
+        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
 
     def turn_left(self, degrees: float = 60.0, **kwargs) -> Dict[str, Any]:
         """Turn the rover to the left by `degrees` relative to current orientation using the `Turn` service."""
@@ -131,7 +131,7 @@ class ActionServer(Node):
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
             self.get_logger().error(msg)
-            raise RuntimeError(msg)
+            return {'success': False, 'error': msg}
 
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
@@ -139,7 +139,7 @@ class ActionServer(Node):
         future = self.turn_client.call_async(req)
         rclpy.spin_until_future_complete(self, future)
         res = future.result()
-        return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'target_orientation': target_orientation}
+        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
 
     def turn_towards(self, direction: float, **kwargs) -> Dict[str, Any]:
         """Turn the rover to the absolute `direction` (same units as pose subscription) via `Turn` service."""
@@ -147,7 +147,7 @@ class ActionServer(Node):
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
             self.get_logger().error(msg)
-            raise RuntimeError(msg)
+            return {'success': False, 'error': msg}
 
         req = TurnSrv.Request()
         req.orientation = direction
@@ -155,7 +155,7 @@ class ActionServer(Node):
         future = self.turn_client.call_async(req)
         rclpy.spin_until_future_complete(self, future)
         res = future.result()
-        return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'target_orientation': direction}
+        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
     
     def place_waypoint(self, x: float, y: float, **kwargs) -> Dict[str, Any]:
         """Place a waypoint by publishing a Point to the MBRA topic and enabling MBRA."""
@@ -166,7 +166,7 @@ class ActionServer(Node):
         if not self.mbra_client.wait_for_service(timeout_sec=1.0):
             msg = 'MBRA service not available'
             self.get_logger().error(msg)
-            raise RuntimeError(msg)
+            return {'success': False, 'error': msg}
 
         req = EnableMBRASrv.Request()
         req.enable = True
