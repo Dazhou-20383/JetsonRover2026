@@ -49,8 +49,7 @@ class OllamaClient:
             ]
             }
         )
-        print(state['history'])
-        print("\nCurrent state context sent to the model:", state_context)
+        print(*state['history'])
         output = self.send_request(messages)
 
         return output
