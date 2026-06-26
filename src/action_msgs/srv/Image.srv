@@ -2,4 +2,4 @@ bool temp
 ---
 bool success
 string error
-Image image
+sensor_msgs/Image image
