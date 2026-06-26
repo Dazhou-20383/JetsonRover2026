@@ -33,18 +33,23 @@ class OllamaClient:
 
         state_context = self.build_current_state_context(state)
 
-        state['history'].append(
+        messages = [
+            {"role": "system", "content": agent_prompt},
+            *state['history'],
             {"role": "user", "content": [
                 {"type": "text", "text": state_context},
                 {"type": "image_url", "image_url": {"url": img_url}},
                 ]
             }
-        )
-
-        messages = [
-            {"role": "system", "content": agent_prompt},
-            *state['history']
         ]
+
+        state['history'].append(
+            {"role": "user", "content": [
+                {"type": "text", "text": state_context}
+            ]
+            }
+        )
+        print(state['history'])
         print("\nCurrent state context sent to the model:", state_context)
         output = self.send_request(messages)
 
