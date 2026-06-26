@@ -141,9 +141,6 @@ class VLMNode(Node):
 
         response = future.result()
 
-        if not response.success:
-            raise RuntimeError(response.error or f'Action {tool_name} failed')
-
         return json.loads(response.result_json) if response.result_json else {}
 
     def _tool_arguments(self, tool_call):
