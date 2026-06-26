@@ -183,7 +183,7 @@ class ActionServer(Node):
         
         img = self.camera_client.call(ImageSrv.Request()).image
 
-        cv_image = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
+        cv_image = self.bridge.imgmsg_to_cv2(img, desired_encoding='bgr8')
 
         # 2. Compress the image to JPEG memory buffer
         success, encoded_image = cv2.imencode('.jpg', cv_image)

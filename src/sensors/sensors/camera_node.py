@@ -5,6 +5,7 @@ import socket
 import struct
 import pickle
 from sensor_msgs.msg import Image
+from action_msgs.srv import ImageSrv
 from cv_bridge import CvBridge
 
 class CameraNode(Node):
@@ -38,6 +39,7 @@ class CameraNode(Node):
         
         self.bridge = CvBridge()
         self.image_publisher = self.create_publisher(Image, '/camera/image_raw', 10)
+        self.action_srv = self.create_service(ImageSrv, '/sensor/image', self.image_service_handler)
 
         self.timer = self.create_timer(0.03, self.send_frame)  # ~30 FPS
         self.publish_timer = self.create_timer(1.0, self.publish_frame)
@@ -83,6 +85,22 @@ class CameraNode(Node):
                 self.image_publisher.publish(msg)
             except Exception as e:
                 self.get_logger().error(f"Error publishing frame: {e}")
+
+    def image_service_handler(self, request, response):
+        if self.current_frame is not None:
+            try:
+                response.image = self.bridge.cv2_to_imgmsg(self.current_frame, encoding="bgr8")
+                response.success = True
+            except Exception as e:
+                response.error = f"Error converting frame to Image message: {e}"
+                response.success = False
+                self.get_logger().error(f"Error converting frame to Image message: {e}")
+        else:
+            response.error = "No frame available to serve."
+            response.success = False
+            self.get_logger().warn("No frame available to serve.")
+
+        return response
 
     def destroy_node(self):
         self.cap.release()
