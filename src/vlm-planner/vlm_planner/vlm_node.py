@@ -95,8 +95,8 @@ class VLMNode(Node):
 
                 self.current_state['history'].append({
                     "type": "function_call_output",
-                    "call_id": tool_call.call_id,
-                    "output": result,
+                    "call_id": tool_call.id,
+                    "output": str(result),
                 })
 
                 tool_record = {
