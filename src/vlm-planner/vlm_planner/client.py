@@ -35,6 +35,7 @@ class OllamaClient:
 
         messages = [
             {"role": "system", "content": agent_prompt},
+            *state['history'],
             {"role": "user", "content": [
                 {"type": "text", "text": state_context},
                 {"type": "image_url", "image_url": {"url": img_url}},
@@ -62,7 +63,7 @@ class OllamaClient:
             extra_body={"keep_alive": -1}
         )
 
-        return response.choices[0].message
+        return response
     
     def point_image(self, image: str, description: str) -> tuple[int, int]:
         """Point to a location in an image based on a text description.
@@ -116,8 +117,7 @@ class OllamaClient:
         # For demonstration purposes, we will return a placeholder string.
         return """Instruction: {instruction}
             Current Pose: {current_pose}
-            Current Waypoint: {current_waypoint}
-            History: {history}""".format(**state)
+            Current Waypoint: {current_waypoint}""".format(**state)
 
     def ros2_image_to_base64(self, ros_image: Image) -> str:
         """Converts a ROS2 Image message to a Base64 encoded string."""

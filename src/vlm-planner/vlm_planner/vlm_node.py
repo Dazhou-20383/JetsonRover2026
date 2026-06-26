@@ -37,7 +37,7 @@ class VLMNode(Node):
             'current_pose': '',
             'current_waypoint': '',
             'current_observation': None,
-            'history': collections.deque(maxlen=4),
+            'history': collections.deque(maxlen=6),
         }
         
         self.get_logger().info('VLM Node has been started.')
@@ -70,40 +70,40 @@ class VLMNode(Node):
                 self._loop_agent()
                 return
             
-            message = self.client.get_response(self.current_state)
+            response = self.client.get_response(self.current_state)
+            message = response.choices[0].message
 
-            tool_calls = getattr(message, 'tool_calls', None) or []
-
-            history = {
-                'tool': [],
-                'content': "",
-                }
-            
             content = getattr(message, 'content', '') or ''
             if content:
-                history['content'] = content
+                self.current_state['history'].append({"role": "system", "content": content})
             self.get_logger().info(f"Agent response: {content}")
+
+            tool_calls = getattr(message, 'tool_calls', None) or []
 
             for tool_call in tool_calls:
                 self.get_logger().info(
                     f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
                 )
                 result = self.execute_tool_call(tool_call)
-                
+
                 self.get_logger().info(
                     f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
                 )
+
+                self.current_state['history'].append({
+                    "type": "function_call_output",
+                    "call_id": tool_call.call_id,
+                    "output": result,
+                })
 
                 tool_record = {
                     'tool': tool_call.function.name,
                     'args': self._tool_arguments(tool_call),
                     'result': result,
                 }
+                print(f"Tool call record: {json.dumps(tool_record)}")
 
-                history['tool'].append(tool_record)
-
-            self.current_state['history'].append(history)
-            self.log_history_to_disk(history)
+            self.get_logger().debug(f"Current state history: {json.dumps(list(self.current_state['history']))}")
 
 
         except Exception as exc:
@@ -121,9 +121,6 @@ class VLMNode(Node):
     def execute_tool_call(self, tool_call):
         tool_name = tool_call.function.name
         args = self._tool_arguments(tool_call)
-
-        if tool_name == 'observe':
-            return {'observation': "some image"}
 
         if not self.action_client.wait_for_service(timeout_sec=0.5):
             raise RuntimeError('Action service /actions is not available')
