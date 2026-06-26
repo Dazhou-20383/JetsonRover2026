@@ -4,14 +4,14 @@ import socket
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import PoseStamped
+from geometry_msgs.msg import Pose2D
 
 
 class IPhonePoseNode(Node):
     def __init__(self):
         super().__init__('iphone_pose_node')
 
-        self.publisher = self.create_publisher(PoseStamped, '/robot_pose', 10)
+        self.publisher = self.create_publisher(Pose2D, '/robot_pose', 10)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('0.0.0.0', 5005))  # same port as Swift app
@@ -32,16 +32,13 @@ class IPhonePoseNode(Node):
         y = float(payload['y'])
         yaw = float(payload['yaw'])
 
-        msg = PoseStamped()
+        msg = Pose2D()
         msg.header.stamp = self.get_clock().now().to_msg()
         msg.header.frame_id = 'map'
 
-        msg.pose.position.x = x
-        msg.pose.position.y = y
-        msg.pose.position.z = 0.0
-
-        msg.pose.orientation.z = math.sin(yaw / 2.0)
-        msg.pose.orientation.w = math.cos(yaw / 2.0)
+        msg.x = x
+        msg.y = y
+        msg.theta = yaw
 
         self.publisher.publish(msg)
 
