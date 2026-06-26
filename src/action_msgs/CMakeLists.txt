@@ -7,6 +7,7 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(sensor_msgs REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -19,6 +20,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/StopSrv.srv"
   "srv/TurnSrv.srv"
   "srv/EnableMBRASrv.srv"
+  DEPENDENCIES sensor_msgs
 )
 
 if(BUILD_TESTING)
