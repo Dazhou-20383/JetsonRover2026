@@ -81,10 +81,8 @@ class VLMNode(Node):
             response = self.client.get_response(self.current_state)
             message = response.choices[0].message
 
-            content = getattr(message, 'content', '') or ''
-            if content:
-                self.current_state['history'].append({"role": "assistant", "content": content})
-            self.get_logger().info(f"Agent response: {content}")
+            print(f"Agent response: {message.output}")
+            self.current_state['history'].append(message.output)
 
             tool_calls = getattr(message, 'tool_calls', None) or []
 
