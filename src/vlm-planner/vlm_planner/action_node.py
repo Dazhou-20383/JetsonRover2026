@@ -1,6 +1,5 @@
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Float32, Bool
 from geometry_msgs.msg import Point, Pose2D
 from action_msgs.srv import Tool
 from action_msgs.srv import Image as ImageSrv
