@@ -15,9 +15,10 @@ find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/Tool.srv"
-  "srv/Stop.srv"
-  "srv/Turn.srv"
-  "srv/EnableMBRA.srv"
+  "srv/ImageSrv.srv"
+  "srv/StopSrv.srv"
+  "srv/TurnSrv.srv"
+  "srv/EnableMBRASrv.srv"
 )
 
 if(BUILD_TESTING)
