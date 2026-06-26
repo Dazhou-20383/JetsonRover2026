@@ -96,8 +96,7 @@ class ActionServer(Node):
         """Call the typed `Stop` service on the rover controller."""
         if not self.stop_client.wait_for_service(timeout_sec=1.0):
             msg = 'Stop service not available'
-            self.get_logger().error(msg)
-            return {'success': False, 'error': msg}
+            raise RuntimeError(msg)
 
         req = StopSrv.Request()
         req.command = kwargs.get('command', 'stop')
@@ -112,8 +111,7 @@ class ActionServer(Node):
         target_orientation = self.current_orientation - float(degrees)
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
-            self.get_logger().error(msg)
-            return {'success': False, 'error': msg}
+            raise RuntimeError(msg)
 
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
@@ -128,8 +126,7 @@ class ActionServer(Node):
         target_orientation = self.current_orientation + float(degrees)
         if not self.turn_client.wait_for_service(timeout_sec=1.0):
             msg = 'Turn service not available'
-            self.get_logger().error(msg)
-            return {'success': False, 'error': msg}
+            raise RuntimeError(msg)
 
         req = TurnSrv.Request()
         req.orientation = float(target_orientation)
