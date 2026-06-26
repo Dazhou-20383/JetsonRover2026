@@ -107,8 +107,6 @@ class VLMNode(Node):
                 print(f"Tool call record: {json.dumps(tool_record)}")
 
             self.get_logger().debug(f"Current state history: {json.dumps(list(self.current_state['history']))}")
-
-
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
 
@@ -150,7 +148,7 @@ class VLMNode(Node):
         return arguments
     
     def _loop_agent(self):
-        self.agent_timer = self.create_timer(0.2, self.run_agent)
+        self.agent_timer = self.create_timer(0.2, self.run_agent, callback_group=self.client_cb_group)
 
 
 def main(args=None):
