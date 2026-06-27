@@ -2,12 +2,12 @@
 #include <memory>
 #include <mutex>
 
-#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <geometry_msgs/msg/Pose2D.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <std_msgs/msg/bool.hpp>
-#include <std_msgs/msg/float32.hpp>
-#include <std_msgs/msg/string.hpp>
+#include <action_msgs/srv/StopSrv.hpp>
+#include <action_msgs/srv/TurnSrv.hpp>
+#include <action_msgs/srv/EnableMBRASrv.hpp>
 
 class RoverControllerNode : public rclcpp::Node {
 public:
@@ -33,19 +33,19 @@ public:
         "/mbra/cmd_vel", 10,
         std::bind(&RoverControllerNode::cmdVelCallback, this, std::placeholders::_1));
 
-    stop_sub_ = create_subscription<std_msgs::msg::String>(
+    stop_sub_ = create_subscription<action_msgs::srv::StopSrv>(
         "/actions/stop", 10,
         std::bind(&RoverControllerNode::stopCallback, this, std::placeholders::_1));
 
-    turn_sub_ = create_subscription<std_msgs::msg::Float32>(
+    turn_sub_ = create_subscription<action_msgs::srv::TurnSrv>(
         "/actions/turn", 10,
         std::bind(&RoverControllerNode::turnCallback, this, std::placeholders::_1));
 
-    mbra_enable_sub_ = create_subscription<std_msgs::msg::Bool>(
+    mbra_enable_sub_ = create_subscription<action_msgs::srv::EnableMBRASrv>(
         "/actions/enable_mbra", 10,
         std::bind(&RoverControllerNode::mbraEnableCallback, this, std::placeholders::_1));
 
-    pose_sub_ = create_subscription<geometry_msgs::msg::PoseStamped>(
+    pose_sub_ = create_subscription<geometry_msgs::msg::Pose2D>(
         "/robot/pose", 10,
         std::bind(&RoverControllerNode::poseCallback, this, std::placeholders::_1));
 
@@ -80,7 +80,7 @@ private:
                 mbra_angular_);
   }
 
-  void stopCallback(const std_msgs::msg::String::SharedPtr /*msg*/) {
+  void stopCallback(const action_msgs::srv::StopSrv::SharedPtr /*msg*/) {
     std::lock_guard<std::mutex> lock(mutex_);
     action_linear_ = 0.0;
     action_angular_ = 0.0;
@@ -88,7 +88,7 @@ private:
     RCLCPP_INFO(get_logger(), "Received stop command, stopping the rover.");
   }
 
-  void turnCallback(const std_msgs::msg::Float32::SharedPtr msg) {
+  void turnCallback(const action_msgs::srv::TurnSrv::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     const double turn_angle_deg = static_cast<double>(msg->data);
@@ -99,7 +99,7 @@ private:
                 turn_angle_deg, target_yaw_deg_);
   }
 
-  void mbraEnableCallback(const std_msgs::msg::Bool::SharedPtr msg) {
+  void mbraEnableCallback(const action_msgs::srv::EnableMBRASrv::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mutex_);
     mbra_enabled_ = msg->data;
     RCLCPP_INFO(get_logger(), "MBRA enabled: %s", mbra_enabled_ ? "true" : "false");
