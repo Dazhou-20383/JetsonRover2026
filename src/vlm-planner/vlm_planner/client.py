@@ -111,13 +111,19 @@ class OllamaClient:
         )
 
         content = response.choices[0].message.content
-        match = re.search(r"\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)", content)
-        if not match:
+
+        bounding_box = content.get("bounding_box", None)
+        # bounding box format: [x_{min}, y_{min}, x_{max}, y_{max}]
+
+        if not bounding_box:
             print("No coordinates found in model response, returning (0, 0)")
             print("Model response content was: '", content, "'")
             return (0, 0)
 
-        return (int(round(float(match.group(1)))), int(round(float(match.group(2)))))
+        x = (bounding_box[0] + bounding_box[2]) / 2
+        y = (bounding_box[1] + bounding_box[3]) / 2
+
+        return x, y
     
     def build_current_state_context(self, state):
         # This function should build the current state context string based on the input data.

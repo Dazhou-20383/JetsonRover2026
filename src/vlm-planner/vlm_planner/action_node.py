@@ -12,6 +12,7 @@ from typing import Any, Dict, Tuple
 import threading
 
 from .client import OllamaClient
+from .utils import Homography
 
 from cv_bridge import CvBridge, CvBridgeError
 import cv2
@@ -46,6 +47,7 @@ class ActionServer(Node):
         # VLM client (language + vision model wrapper)
         self.vlm = OllamaClient()
         self.bridge = CvBridge()
+        self.homography = Homography()
 
         self.get_logger().info('Action Node has been started.')
 
@@ -75,16 +77,16 @@ class ActionServer(Node):
             func = self.tools[tool_name]
 
             # execute function with kwargs
-            result = func(**payload)
+            result, error = func(**payload)
 
             response.success = True
             response.result_json = json.dumps(result or {})
-            response.error = ''
+            response.error = error
 
         except Exception as e:
             self.get_logger().error(f'Action handling failed: {e}')
             response.success = False
-            response.result_json = ''
+            response.result_json = f'Action handling failed: {e}'
             response.error = str(e)
 
         return response
@@ -107,8 +109,9 @@ class ActionServer(Node):
         req = StopSrv.Request()
         req.command = kwargs.get('command', 'stop')
 
-        res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
+        res = self._call_and_wait(self.stop_client, req)
+        error = getattr(res, 'error', '')
+        return {'success': bool(res.success)}, error
 
     def turn_right(self, degrees: float = 60.0, **kwargs) -> Dict[str, Any]:
         """Turn the rover to the right by `degrees` relative to current orientation using the `Turn` service."""
@@ -121,7 +124,8 @@ class ActionServer(Node):
         req.orientation = float(target_orientation)
 
         res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
+        error = getattr(res, 'error', '')
+        return {'success': bool(res.success)}, error
 
     def turn_left(self, degrees: float = 60.0, **kwargs) -> Dict[str, Any]:
         """Turn the rover to the left by `degrees` relative to current orientation using the `Turn` service."""
@@ -134,7 +138,8 @@ class ActionServer(Node):
         req.orientation = float(target_orientation)
 
         res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
+        error = getattr(res, 'error', '')
+        return {'success': bool(res.success)}, error
 
     def turn_towards(self, direction: float, **kwargs) -> Dict[str, Any]:
         """Turn the rover to the absolute `direction` (same units as pose subscription) via `Turn` service."""
@@ -147,7 +152,8 @@ class ActionServer(Node):
         req.orientation = direction
 
         res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', '')}
+        error = getattr(res, 'error', '')
+        return {'success': bool(res.success)}, error
     
     def place_waypoint(self, x: float, y: float, **kwargs) -> Dict[str, Any]:
         """Place a waypoint by publishing a Point to the MBRA topic and enabling MBRA."""
@@ -163,8 +169,9 @@ class ActionServer(Node):
         req = EnableMBRASrv.Request()
         req.enable = True
         
-        res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'point': {'x': point.x, 'y': point.y}}
+        res = self._call_and_wait(self.mbra_client, req)
+        error = getattr(res, 'error', '')
+        return {'success': bool(res.success), 'point': {'x': point.x, 'y': point.y}}, error
 
     def place_waypoint_precise(self, loc_description: str, **kwargs) -> Dict[str, Any]:
         """Use the VLM client to localize a described point in the current camera image and place a waypoint.
@@ -188,10 +195,12 @@ class ActionServer(Node):
         base64_image = base64.b64encode(encoded_image.tobytes()).decode('utf-8')
         
         try:
-            x, y = self.vlm.point_image(base64_image, loc_description)
+            x_img, y_img = self.vlm.point_image(base64_image, loc_description)
         except Exception as e:
             self.get_logger().error(f'VLM point_image failed: {e}')
             raise
+
+        x, y = self.homography.project_point(x_img, y_img)
 
         point = Point(x=float(x), y=float(y), z=0.0)
         self.get_logger().info(f'Publishing precise waypoint: ({point.x}, {point.y})')
@@ -200,11 +209,14 @@ class ActionServer(Node):
             msg = 'MBRA service not available'
             self.get_logger().error(msg)
             raise RuntimeError(msg)
-
+        
         req = EnableMBRASrv.Request()
         req.enable = True
-        res = self._call_and_wait(self.turn_client, req)
-        return {'success': bool(res.success), 'error': getattr(res, 'error', ''), 'point': {'x': point.x, 'y': point.y}}
+
+        res = self._call_and_wait(self.mbra_client, req)
+        error = getattr(res, 'error', '')
+
+        return {'success': bool(res.success), 'point': {'x': point.x, 'y': point.y}}, error
 
     def _call_and_wait(self, client, request, timeout=2.0):
         future = client.call_async(request)
