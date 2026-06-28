@@ -2,48 +2,51 @@
 #include <memory>
 #include <mutex>
 
-#include <geometry_msgs/msg/Pose2D.hpp>
+#include <geometry_msgs/msg/pose2_d.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <action_msgs/srv/StopSrv.hpp>
-#include <action_msgs/srv/TurnSrv.hpp>
-#include <action_msgs/srv/EnableMBRASrv.hpp>
+#include <action_msgs/srv/enable_mbra_srv.hpp>
+#include <action_msgs/srv/stop_srv.hpp>
+#include <action_msgs/srv/turn_srv.hpp>
 
 class RoverControllerNode : public rclcpp::Node {
 public:
   RoverControllerNode() : Node("rover_controller_node") {
     yaw_tolerance_deg_ = declare_parameter<double>("yaw_tolerance_deg", yaw_tolerance_deg_);
-    turn_speed_rad_s_ = declare_parameter<double>("turn_speed_rad_s", turn_speed_rad_s_);
+    turn_speed_deg_s_ = declare_parameter<double>("turn_speed_deg_s", turn_speed_deg_s_);
 
     if (yaw_tolerance_deg_ < 0.0) {
       RCLCPP_WARN(get_logger(), "Parameter yaw_tolerance_deg is negative (%.3f). Using absolute value.",
                   yaw_tolerance_deg_);
       yaw_tolerance_deg_ = std::abs(yaw_tolerance_deg_);
     }
-    if (turn_speed_rad_s_ < 0.0) {
-      RCLCPP_WARN(get_logger(), "Parameter turn_speed_rad_s is negative (%.3f). Using absolute value.",
-                  turn_speed_rad_s_);
-      turn_speed_rad_s_ = std::abs(turn_speed_rad_s_);
+    if (turn_speed_deg_s_ < 0.0) {
+      RCLCPP_WARN(get_logger(), "Parameter turn_speed_deg_s is negative (%.3f). Using absolute value.",
+                  turn_speed_deg_s_);
+      turn_speed_deg_s_ = std::abs(turn_speed_deg_s_);
     }
 
-    RCLCPP_INFO(get_logger(), "Using parameters: yaw_tolerance_deg=%.3f, turn_speed_rad_s=%.3f",
-                yaw_tolerance_deg_, turn_speed_rad_s_);
+    RCLCPP_INFO(get_logger(), "Using parameters: yaw_tolerance_deg=%.3f, turn_speed_deg_s=%.3f",
+                yaw_tolerance_deg_, turn_speed_deg_s_);
 
     cmd_vel_sub_ = create_subscription<geometry_msgs::msg::Twist>(
         "/mbra/cmd_vel", 10,
         std::bind(&RoverControllerNode::cmdVelCallback, this, std::placeholders::_1));
 
-    stop_sub_ = create_subscription<action_msgs::srv::StopSrv>(
-        "/actions/stop", 10,
-        std::bind(&RoverControllerNode::stopCallback, this, std::placeholders::_1));
+    stop_srv_ = create_service<action_msgs::srv::StopSrv>(
+      "/actions/stop",
+      std::bind(&RoverControllerNode::stopCallback, this, std::placeholders::_1,
+            std::placeholders::_2));
 
-    turn_sub_ = create_subscription<action_msgs::srv::TurnSrv>(
-        "/actions/turn", 10,
-        std::bind(&RoverControllerNode::turnCallback, this, std::placeholders::_1));
+    turn_srv_ = create_service<action_msgs::srv::TurnSrv>(
+      "/actions/turn",
+      std::bind(&RoverControllerNode::turnCallback, this, std::placeholders::_1,
+            std::placeholders::_2));
 
-    mbra_enable_sub_ = create_subscription<action_msgs::srv::EnableMBRASrv>(
-        "/actions/enable_mbra", 10,
-        std::bind(&RoverControllerNode::mbraEnableCallback, this, std::placeholders::_1));
+    mbra_enable_srv_ = create_service<action_msgs::srv::EnableMBRASrv>(
+      "/actions/enable_mbra",
+      std::bind(&RoverControllerNode::mbraEnableCallback, this, std::placeholders::_1,
+            std::placeholders::_2));
 
     pose_sub_ = create_subscription<geometry_msgs::msg::Pose2D>(
         "/robot/pose", 10,
@@ -80,41 +83,42 @@ private:
                 mbra_angular_);
   }
 
-  void stopCallback(const action_msgs::srv::StopSrv::SharedPtr /*msg*/) {
+  void stopCallback(const std::shared_ptr<action_msgs::srv::StopSrv::Request> /*request*/,
+                    std::shared_ptr<action_msgs::srv::StopSrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
     action_linear_ = 0.0;
     action_angular_ = 0.0;
     turning_active_ = false;
+    response->success = true;
+    response->error.clear();
     RCLCPP_INFO(get_logger(), "Received stop command, stopping the rover.");
   }
 
-  void turnCallback(const action_msgs::srv::TurnSrv::SharedPtr msg) {
+  void turnCallback(const std::shared_ptr<action_msgs::srv::TurnSrv::Request> request,
+                    std::shared_ptr<action_msgs::srv::TurnSrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    const double turn_angle_deg = static_cast<double>(msg->data);
-    target_yaw_deg_ = normalizeDeg(yaw_deg_ + turn_angle_deg);
+    target_yaw_deg_ = normalizeDeg(static_cast<double>(request->orientation));
 
     turning_active_ = true;
-    RCLCPP_INFO(get_logger(), "Received turn command: turn_angle=%.2f deg, target_yaw=%.2f deg",
-                turn_angle_deg, target_yaw_deg_);
+    response->success = true;
+    response->error.clear();
+    RCLCPP_INFO(get_logger(), "Received turn command: target_yaw=%.2f deg", target_yaw_deg_);
   }
 
-  void mbraEnableCallback(const action_msgs::srv::EnableMBRASrv::SharedPtr msg) {
+  void mbraEnableCallback(const std::shared_ptr<action_msgs::srv::EnableMBRASrv::Request> request,
+                          std::shared_ptr<action_msgs::srv::EnableMBRASrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
-    mbra_enabled_ = msg->data;
+    mbra_enabled_ = request->enable;
+    response->success = true;
+    response->error.clear();
     RCLCPP_INFO(get_logger(), "MBRA enabled: %s", mbra_enabled_ ? "true" : "false");
   }
 
-  void poseCallback(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+  void poseCallback(const geometry_msgs::msg::Pose2D::SharedPtr msg) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    // Convert quaternion to yaw (Z axis rotation).
-    const auto &q = msg->pose.orientation;
-    const double siny_cosp = 2.0 * (q.w * q.z + q.x * q.y);
-    const double cosy_cosp = 1.0 - 2.0 * (q.y * q.y + q.z * q.z);
-    const double yaw_rad = std::atan2(siny_cosp, cosy_cosp);
-
-    yaw_deg_ = normalizeDeg(yaw_rad * 180.0 / M_PI);
+    yaw_deg_ = normalizeDeg(msg->theta);
     RCLCPP_INFO(get_logger(), "Received pose: yaw=%.2f deg", yaw_deg_);
   }
 
@@ -128,7 +132,7 @@ private:
         action_angular_ = 0.0;
         turning_active_ = false;
       } else {
-        action_angular_ = (error_deg > 0.0) ? turn_speed_rad_s_ : -turn_speed_rad_s_;
+        action_angular_ = (error_deg > 0.0) ? turn_speed_deg_s_ : -turn_speed_deg_s_;
       }
     }
 
@@ -147,10 +151,10 @@ private:
   std::mutex mutex_;
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
-  rclcpp::Subscription<std_msgs::msg::String>::SharedPtr stop_sub_;
-  rclcpp::Subscription<std_msgs::msg::Float32>::SharedPtr turn_sub_;
-  rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr mbra_enable_sub_;
-  rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr pose_sub_;
+  rclcpp::Service<action_msgs::srv::StopSrv>::SharedPtr stop_srv_;
+  rclcpp::Service<action_msgs::srv::TurnSrv>::SharedPtr turn_srv_;
+  rclcpp::Service<action_msgs::srv::EnableMBRASrv>::SharedPtr mbra_enable_srv_;
+  rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
 
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr control_timer_;
@@ -167,7 +171,7 @@ private:
   bool turning_active_ = false;
 
   double yaw_tolerance_deg_ = 5.0;
-  double turn_speed_rad_s_ = 0.5;
+  double turn_speed_deg_s_ = 0.5;
 };
 
 int main(int argc, char **argv) {
