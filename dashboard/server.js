@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const DASHBOARD_PORT = Number(process.env.DASHBOARD_PORT || 3000);
-const SOCKET_HOST = process.env.DASHBOARD_SOCKET_HOST || '127.0.0.1';
+const SOCKET_HOST = process.env.DASHBOARD_SOCKET_HOST || '0.0.0.0';
 const SOCKET_PORT = Number(process.env.DASHBOARD_SOCKET_PORT || 9000);
 
 const publicDir = path.join(__dirname, 'public');
@@ -26,9 +26,8 @@ const state = {
   },
 };
 
-let socketClient = null;
-let reconnectTimer = null;
-let socketBuffer = '';
+let telemetryServer = null;
+const socketBuffers = new WeakMap();
 
 function sendSse(res, eventName, payload) {
   res.write(`event: ${eventName}\n`);
@@ -61,39 +60,25 @@ function setConnectionStatus(connected, errorMessage = null) {
   broadcast('status', { connection: state.connection });
 }
 
-function scheduleReconnect() {
-  if (reconnectTimer) {
-    return;
-  }
-
-  reconnectTimer = setTimeout(() => {
-    reconnectTimer = null;
-    connectSocket();
-  }, 1500);
-}
-
 function closeSocket() {
-  if (socketClient) {
-    socketClient.destroy();
-    socketClient = null;
+  if (telemetryServer) {
+    telemetryServer.close();
+    telemetryServer = null;
   }
 }
 
-function connectSocket() {
-  closeSocket();
+function handleTelemetrySocket(socket) {
+  socketBuffers.set(socket, '');
+  socket.setNoDelay(true);
+  setConnectionStatus(true, null);
 
-  socketBuffer = '';
-  socketClient = net.createConnection({ host: SOCKET_HOST, port: SOCKET_PORT });
+  console.log(
+    `Telemetry client connected from ${socket.remoteAddress || 'unknown'}:${socket.remotePort || 'unknown'}`,
+  );
 
-  socketClient.setNoDelay(true);
-
-  socketClient.on('connect', () => {
-    setConnectionStatus(true, null);
-    console.log(`Connected to telemetry socket at ${SOCKET_HOST}:${SOCKET_PORT}`);
-  });
-
-  socketClient.on('data', (chunk) => {
-    socketBuffer += chunk.toString('utf8');
+  socket.on('data', (chunk) => {
+    const nextBuffer = `${socketBuffers.get(socket) || ''}${chunk.toString('utf8')}`;
+    let socketBuffer = nextBuffer;
 
     let newlineIndex = socketBuffer.indexOf('\n');
     while (newlineIndex !== -1) {
@@ -112,18 +97,34 @@ function connectSocket() {
         console.warn('Failed to parse telemetry payload:', error.message);
       }
     }
+
+    socketBuffers.set(socket, socketBuffer);
   });
 
-  socketClient.on('error', (error) => {
-    setConnectionStatus(false, error.message);
+  socket.on('error', (error) => {
     console.warn(`Telemetry socket error: ${error.message}`);
   });
 
-  socketClient.on('close', () => {
+  socket.on('close', () => {
+    socketBuffers.delete(socket);
     if (state.connection.socketConnected) {
       setConnectionStatus(false, 'Socket disconnected');
     }
-    scheduleReconnect();
+  });
+}
+
+function startSocketServer() {
+  closeSocket();
+
+  telemetryServer = net.createServer(handleTelemetrySocket);
+
+  telemetryServer.on('error', (error) => {
+    setConnectionStatus(false, error.message);
+    console.warn(`Telemetry socket server error: ${error.message}`);
+  });
+
+  telemetryServer.listen(SOCKET_PORT, SOCKET_HOST, () => {
+    console.log(`Listening for telemetry socket on ${SOCKET_HOST}:${SOCKET_PORT}`);
   });
 }
 
@@ -191,8 +192,7 @@ const server = http.createServer((req, res) => {
 
 server.listen(DASHBOARD_PORT, () => {
   console.log(`Dashboard available at http://localhost:${DASHBOARD_PORT}`);
-  console.log(`Listening for telemetry socket on ${SOCKET_HOST}:${SOCKET_PORT}`);
-  connectSocket();
+  startSocketServer();
 });
 
 process.on('SIGINT', () => {

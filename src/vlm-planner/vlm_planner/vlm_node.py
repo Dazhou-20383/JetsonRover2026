@@ -50,16 +50,12 @@ class VLMNode(Node):
         self.run_agent()
 
     def instruction_callback(self, msg):
-        # TODO: split instruction into distance, direction, and landmark
-        self.get_logger().info(f'Received instruction: {msg.data}')
         self.current_state['instruction'] = msg.data
     
     def pose_callback(self, msg):
-        self.get_logger().info(f'Received pose: {msg.data}')
         self.current_state['current_pose'] = msg.data
 
     def observation_callback(self, msg):
-        self.get_logger().info(f'Received observation')
         self.current_state['current_observation'] = msg
 
     def run_agent(self):
