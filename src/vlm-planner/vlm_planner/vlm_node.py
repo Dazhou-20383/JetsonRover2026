@@ -43,6 +43,8 @@ class VLMNode(Node):
             'current_observation': None,
             'history': collections.deque(maxlen=6),
         }
+
+        self.state_pub = self.create_publisher(String, '/agent/state', 10)
         
         self.get_logger().info('VLM Node has been started.')
         self.run_agent()
@@ -104,12 +106,7 @@ class VLMNode(Node):
                     "content": str(result),
                 })
 
-                tool_record = {
-                    'tool': tool_call.function.name,
-                    'args': self._tool_arguments(tool_call),
-                    'result': result,
-                }
-
+            self.state_pub.publish(String(data=json.dumps(self.current_state)))
             self.get_logger().debug(f"Current state history: {list(self.current_state['history'])}")
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
