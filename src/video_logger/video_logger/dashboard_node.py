@@ -16,7 +16,7 @@ class Dashboard(Node):
     def __init__(self):
         super().__init__('dashboard_node')
 
-        self.declare_parameter('socket_host', os.environ.get('DASHBOARD_SOCKET_HOST', '127.0.0.1'))
+        self.declare_parameter('socket_host', os.environ.get('DASHBOARD_SOCKET_HOST', '10.42.0.221'))
         self.declare_parameter('socket_port', int(os.environ.get('DASHBOARD_SOCKET_PORT', '9000')))
         self.declare_parameter('send_frequency_hz', 10.0)
 

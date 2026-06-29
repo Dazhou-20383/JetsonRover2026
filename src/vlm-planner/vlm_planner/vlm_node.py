@@ -102,8 +102,8 @@ class VLMNode(Node):
                     "content": str(result),
                 })
 
-            self.state_pub.publish(String(data=json.dumps(self.current_state)))
-            self.get_logger().debug(f"Current state history: {list(self.current_state['history'])}")
+            self.state_pub.publish(String(data=json.dumps(self.current_state['history'])))
+            self.get_logger().info(f"Current state history: {list(self.current_state['history'])}")
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
 
