@@ -1,0 +1,10 @@
+{
+  "name": "jetsonrover-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Local dashboard for ROS socket telemetry from the Jetson Rover.",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  }
+}

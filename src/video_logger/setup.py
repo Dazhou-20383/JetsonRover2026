@@ -25,6 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'video_logger_node = video_logger.video_logger:main',
+            'dashboard_node = video_logger.dashboard_node:main',
         ],
     },
 )
