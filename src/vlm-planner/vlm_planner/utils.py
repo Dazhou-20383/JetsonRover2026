@@ -38,8 +38,8 @@ class Logger:
         self.history.extend(entry)
         self.conv_len.append(len(entry))
 
-        if sum(self.conv_len) > self.conv_limit:
-            while sum(self.conv_len) > self.conv_limit:
+        if len(self.conv_len) > self.conv_limit:
+            while len(self.conv_len) > self.conv_limit:
                 removed_length = self.conv_len.pop(0)
                 self.history = self.history[removed_length:]
 

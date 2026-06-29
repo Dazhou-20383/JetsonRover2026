@@ -1,6 +1,7 @@
 import base64
 import re
 import cv2
+import json
 from cv_bridge import CvBridge
 from sensor_msgs.msg import Image
 from openai import OpenAI
@@ -103,13 +104,16 @@ class OllamaClient:
 
         content = response.choices[0].message.content
 
-        bounding_box = content.get("bounding_box", None)
+        content = content.removeprefix("```json\n").removesuffix("\n```")
+        data = json.loads(content)
+
+        bounding_box = data[0]["bbox_2d"]
         # bounding box format: [x_{min}, y_{min}, x_{max}, y_{max}]
 
         if not bounding_box:
             print("No coordinates found in model response, returning (0, 0)")
             print("Model response content was: '", content, "'")
-            return (0, 0)
+            return 0, 0
 
         x = (bounding_box[0] + bounding_box[2]) / 2
         y = (bounding_box[1] + bounding_box[3]) / 2

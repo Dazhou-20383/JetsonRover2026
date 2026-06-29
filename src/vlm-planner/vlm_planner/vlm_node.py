@@ -129,7 +129,7 @@ class VLMNode(Node):
                     "content": str(result),
                 })
 
-                self.history_logger.extend(history)
+                self.history_logger.log(history)
 
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
