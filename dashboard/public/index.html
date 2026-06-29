@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Jetson Rover Dashboard</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script defer src="/app.js"></script>
+  </head>
+  <body>
+    <main class="shell">
+      <section class="hero">
+        <div>
+          <p class="eyebrow">Live telemetry</p>
+          <h1>Jetson Rover Dashboard</h1>
+          <p class="lede">
+            Real-time view of the ROS socket stream: agent state, motion, pose,
+            images, and transport status.
+          </p>
+        </div>
+
+        <div class="status-card">
+          <div class="status-label">Socket status</div>
+          <div id="socketStatus" class="status-value">Connecting…</div>
+          <div id="lastMessageAt" class="status-meta">Waiting for first payload</div>
+        </div>
+      </section>
+
+      <section class="grid">
+        <article class="panel span-2">
+          <div class="panel-header">
+            <h2>Camera</h2>
+            <span id="imageMeta" class="panel-meta">No image yet</span>
+          </div>
+          <div class="image-frame">
+            <img id="cameraImage" alt="Camera feed" />
+            <div id="imagePlaceholder" class="placeholder">No frame received yet</div>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Velocity</h2>
+          </div>
+          <div class="metric-row">
+            <span>Linear</span>
+            <strong id="linearVelocity">0.000</strong>
+          </div>
+          <div class="metric-row">
+            <span>Angular</span>
+            <strong id="angularVelocity">0.000</strong>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Pose</h2>
+          </div>
+          <div class="metric-row">
+            <span>X</span>
+            <strong id="poseX">0.000</strong>
+          </div>
+          <div class="metric-row">
+            <span>Y</span>
+            <strong id="poseY">0.000</strong>
+          </div>
+          <div class="metric-row">
+            <span>Theta</span>
+            <strong id="poseTheta">0.000</strong>
+          </div>
+        </article>
+
+        <article class="panel">
+          <div class="panel-header">
+            <h2>Motor Commands</h2>
+            <span id="motorCount" class="panel-meta">0 values</span>
+          </div>
+          <div id="motorCommands" class="command-list"></div>
+        </article>
+
+        <article class="panel span-2">
+          <div class="panel-header">
+            <h2>Agent State</h2>
+            <span class="panel-meta">Raw JSON payload</span>
+          </div>
+          <pre id="agentState" class="json-block">{}</pre>
+        </article>
+
+        <article class="panel span-2">
+          <div class="panel-header">
+            <h2>Telemetry Snapshot</h2>
+            <span class="panel-meta">Latest socket message</span>
+          </div>
+          <pre id="snapshot" class="json-block">Waiting for data…</pre>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
