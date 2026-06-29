@@ -41,13 +41,6 @@ class OllamaClient:
             }
         ]
 
-        state['history'].append(
-            {"role": "user", "content": [
-                {"type": "text", "text": state_context}
-            ]
-            }
-        )
-        print(*state['history'])
         output = self.send_request(messages)
 
         return output

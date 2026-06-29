@@ -14,7 +14,7 @@ import signal
 import threading
 
 from .client import OllamaClient
-
+from .utils import Logger
 from .tools import tools
 
 class VLMNode(Node):
@@ -42,8 +42,10 @@ class VLMNode(Node):
             'current_pose': '',
             'current_waypoint': '',
             'current_observation': None,
-            'history': collections.deque(maxlen=6),
+            'history': [],
         }
+
+        self.history_logger = Logger(conv_limit=3)
 
         self.state_pub = self.create_publisher(String, '/agent/state', 10)
         
@@ -83,12 +85,28 @@ class VLMNode(Node):
             content = getattr(message, 'content', None) or ''
             tool_calls = getattr(message, 'tool_calls', None) or []
 
-            if content:
-                assistant_message = {
-                    "role": "assistant",
-                    "content": content,
+            # Update current state history
+            history = []
+
+            state_context = self.client.build_current_state_context(self.current_state)
+            history.append(
+                {"role": "user", "content": [
+                    {"type": "text", "text": state_context}
+                ]
                 }
-                self.current_state['history'].append(assistant_message)
+            )
+
+            assistant_message = {"role": "assistant", "content": content}
+            if tool_calls:
+                assistant_message["tool_calls"] = [
+                    {
+                        "id": tc.id,
+                        "type": "function",
+                        "function": {"name": tc.function.name, "arguments": tc.function.arguments},
+                    }
+                    for tc in tool_calls
+                ]
+            history.append(assistant_message)
 
             self.get_logger().info(f"Agent response: {content}")
 
@@ -96,22 +114,29 @@ class VLMNode(Node):
                 self.get_logger().info(
                     f"Agent action: {tool_call.function.name}({json.dumps(self._tool_arguments(tool_call))})"
                 )
-                result = self.execute_tool_call(tool_call)
+                try:
+                    result = self.execute_tool_call(tool_call)
+                except Exception as tool_exc:
+                    self.get_logger().error(f'Tool call {tool_call.function.name} failed: {tool_exc}')
+                    result = {'error': str(tool_exc)}
 
                 self.get_logger().info(
                     f"Agent result: {tool_call.function.name} -> {json.dumps(result)}"
                 )
-
-                self.current_state['history'].append({
+                history.append({
                     "role": "tool",
-                    "tool_name": tool_call.function.name,
+                    "tool_call_id": tool_call.id,
                     "content": str(result),
                 })
 
-            self.state_pub.publish(String(data=json.dumps(list(self.current_state['history']))))
+                self.logger.extend(history)
+
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
-            
+
+        self.current_state['history'] = self.logger.get_history()
+
+        self.state_pub.publish(String(data=json.dumps(list(self.current_state['history']))))
         self.get_logger().info(f"Current state history: {list(self.current_state['history'])}")
         self._loop_agent()
 
