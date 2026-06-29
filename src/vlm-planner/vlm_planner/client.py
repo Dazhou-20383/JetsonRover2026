@@ -11,8 +11,7 @@ class OllamaClient:
                  model="qwen3.5:2b",
                  tool_executor=None,
                  tools=None,
-                 max_tokens=1024,
-                 temperature=0.1, 
+                 max_tokens=1024, 
                  think=False,
                  server_ip="localhost",
                  **kwargs):
@@ -20,7 +19,6 @@ class OllamaClient:
         self.tools = tools or []
         self.model = model
         self.max_tokens = max_tokens
-        self.temperature = temperature
         self.think = think
         
         self.bridge = CvBridge()
@@ -64,7 +62,7 @@ class OllamaClient:
             messages=normalized_messages,
             tools=self.tools,
             tool_choice="auto",
-            temperature=self.temperature,
+            temperature=0.05,
             max_tokens=self.max_tokens,
             reasoning_effort="none",
             extra_body={"keep_alive": -1}
