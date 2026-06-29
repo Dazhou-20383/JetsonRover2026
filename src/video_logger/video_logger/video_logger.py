@@ -1,3 +1,5 @@
+import signal
+
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
@@ -31,10 +33,30 @@ class VideoLogger(Node):
 
         except Exception as e:
             self.get_logger().error(f"Conversion failed: {e}")
+
+
+def _install_shutdown_handlers(node):
+    def _handle_shutdown(signum, frame):
+        if rclpy.ok():
+            node.get_logger().info(f'Received signal {signum}, shutting down.')
+            rclpy.try_shutdown()
+
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _handle_shutdown)
     
 def main(args=None):
     rclpy.init(args=args)
     video_logger = VideoLogger()
-    rclpy.spin(video_logger)
-    video_logger.destroy_node()
-    rclpy.shutdown()
+    _install_shutdown_handlers(video_logger)
+    try:
+        rclpy.spin(video_logger)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        video_logger.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()

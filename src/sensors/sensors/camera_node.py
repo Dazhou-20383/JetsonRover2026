@@ -1,3 +1,5 @@
+import signal
+
 import rclpy
 from rclpy.node import Node
 import cv2
@@ -115,13 +117,29 @@ class CameraNode(Node):
             pass
         super().destroy_node()
 
+
+def _install_shutdown_handlers(node):
+    def _handle_shutdown(signum, frame):
+        if rclpy.ok():
+            node.get_logger().info(f'Received signal {signum}, shutting down.')
+            rclpy.try_shutdown()
+
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _handle_shutdown)
+
 def main(args=None):
     rclpy.init(args=args)
     node = CameraNode()
+    _install_shutdown_handlers(node)
     try:
         rclpy.spin(node)
     except KeyboardInterrupt:
         pass
     finally:
         node.destroy_node()
-        rclpy.shutdown()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()

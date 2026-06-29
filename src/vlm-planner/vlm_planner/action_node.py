@@ -8,6 +8,7 @@ from action_msgs.srv import Tool
 from action_msgs.srv import ImageSrv, StopSrv, TurnSrv, EnableMBRASrv
 
 import json
+import signal
 from typing import Any, Dict, Tuple
 import threading
 
@@ -225,12 +226,24 @@ class ActionServer(Node):
         if not done_event.wait(timeout=timeout):
             raise TimeoutError('Service call timed out')
         return future.result()
+
+
+def _install_shutdown_handlers(node):
+    def _handle_shutdown(signum, frame):
+        if rclpy.ok():
+            node.get_logger().info(f'Received signal {signum}, shutting down.')
+            rclpy.try_shutdown()
+
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _handle_shutdown)
     
 def main(args=None):
     rclpy.init(args=args)
     node = ActionServer()
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
+    _install_shutdown_handlers(node)
     try:
         executor.spin()
     except KeyboardInterrupt:

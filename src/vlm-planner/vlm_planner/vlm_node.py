@@ -10,6 +10,7 @@ from action_msgs.srv import Tool
 import json
 import collections
 import time
+import signal
 import threading
 
 from .client import OllamaClient
@@ -153,11 +154,23 @@ class VLMNode(Node):
         self.agent_timer = self.create_timer(0.2, self.run_agent)
 
 
+def _install_shutdown_handlers(node):
+    def _handle_shutdown(signum, frame):
+        if rclpy.ok():
+            node.get_logger().info(f'Received signal {signum}, shutting down.')
+            rclpy.try_shutdown()
+
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _handle_shutdown)
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = VLMNode()
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
+    _install_shutdown_handlers(node)
     try:
         executor.spin()
     except KeyboardInterrupt:

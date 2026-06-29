@@ -1,6 +1,7 @@
 import json
 import math
 import socket
+import signal
 
 import rclpy
 from rclpy.node import Node
@@ -43,9 +44,29 @@ class IPhonePoseNode(Node):
         self.publisher.publish(msg)
 
 
+def _install_shutdown_handlers(node):
+    def _handle_shutdown(signum, frame):
+        if rclpy.ok():
+            node.get_logger().info(f'Received signal {signum}, shutting down.')
+            rclpy.try_shutdown()
+
+    signal.signal(signal.SIGINT, _handle_shutdown)
+    if hasattr(signal, 'SIGTERM'):
+        signal.signal(signal.SIGTERM, _handle_shutdown)
+
+
 def main(args=None):
     rclpy.init(args=args)
     node = IPhonePoseNode()
-    rclpy.spin(node)
-    node.destroy_node()
-    rclpy.shutdown()
+    _install_shutdown_handlers(node)
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
+
+
+if __name__ == '__main__':
+    main()
