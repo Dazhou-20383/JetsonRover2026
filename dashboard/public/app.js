@@ -36,6 +36,107 @@ function renderMotorCommands(values) {
   });
 }
 
+function formatMessageContent(content) {
+  if (Array.isArray(content)) {
+    const fragments = content
+      .map((entry) => {
+        if (entry && typeof entry === 'object' && entry.type === 'text') {
+          return entry.text ?? '';
+        }
+
+        if (typeof entry === 'string') {
+          return entry;
+        }
+
+        if (entry == null) {
+          return '';
+        }
+
+        return JSON.stringify(entry, null, 2);
+      })
+      .filter(Boolean);
+
+    return fragments.length > 0 ? fragments.join('\n') : 'No text content';
+  }
+
+  if (typeof content === 'string') {
+    return content;
+  }
+
+  if (content == null) {
+    return 'No content';
+  }
+
+  return JSON.stringify(content, null, 2);
+}
+
+function renderAgentState(value) {
+  agentState.innerHTML = '';
+
+  if (Array.isArray(value)) {
+    if (value.length === 0) {
+      agentState.innerHTML = '<div class="conversation-empty">No agent messages yet.</div>';
+      return;
+    }
+
+    value.forEach((message, index) => {
+      const role = String(message?.role || 'unknown').toLowerCase();
+      const card = document.createElement('article');
+      card.className = `message-card role-${role}`;
+
+      const header = document.createElement('div');
+      header.className = 'message-header';
+
+      const roleLabel = document.createElement('span');
+      roleLabel.className = 'message-role';
+      roleLabel.textContent = message?.role || `message ${index + 1}`;
+
+      const meta = document.createElement('span');
+      meta.className = 'message-meta';
+      meta.textContent = message?.tool_calls?.length ? `${message.tool_calls.length} tool call${message.tool_calls.length === 1 ? '' : 's'}` : 'chat turn';
+
+      header.appendChild(roleLabel);
+      header.appendChild(meta);
+
+      const body = document.createElement('pre');
+      body.className = 'message-content';
+      body.textContent = formatMessageContent(message?.content);
+
+      card.appendChild(header);
+      card.appendChild(body);
+
+      if (Array.isArray(message?.tool_calls) && message.tool_calls.length > 0) {
+        const tools = document.createElement('div');
+        tools.className = 'message-tools';
+
+        message.tool_calls.forEach((toolCall) => {
+          const tool = document.createElement('span');
+          tool.className = 'tool-pill';
+          const toolName = toolCall?.function?.name || 'tool';
+          tool.textContent = `${toolName}`;
+          tools.appendChild(tool);
+        });
+
+        card.appendChild(tools);
+      }
+
+      agentState.appendChild(card);
+    });
+
+    return;
+  }
+
+  if (value && typeof value === 'object') {
+    const fallback = document.createElement('pre');
+    fallback.className = 'message-content conversation-fallback';
+    fallback.textContent = JSON.stringify(value, null, 2);
+    agentState.appendChild(fallback);
+    return;
+  }
+
+  agentState.innerHTML = '<div class="conversation-empty">No agent state yet.</div>';
+}
+
 function setStatus(connected, errorMessage) {
   socketStatus.textContent = connected ? 'Connected' : 'Disconnected';
   socketStatus.className = connected ? 'status-value ok' : 'status-value warn';
@@ -60,7 +161,7 @@ function updateSnapshot(data) {
 
   renderMotorCommands(payload.motor_commands);
 
-  agentState.textContent = JSON.stringify(payload.agent_state ?? {}, null, 2);
+  renderAgentState(payload.agent_state ?? {});
   snapshot.textContent = JSON.stringify(data, null, 2);
 
   if (payload.image?.data) {

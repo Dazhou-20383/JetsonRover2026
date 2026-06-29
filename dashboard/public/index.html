@@ -27,14 +27,27 @@
       </section>
 
       <section class="grid">
-        <article class="panel span-2">
+        <article class="panel span-2 stream-panel">
           <div class="panel-header">
-            <h2>Camera</h2>
+            <h2>Camera and Agent State</h2>
             <span id="imageMeta" class="panel-meta">No image yet</span>
           </div>
-          <div class="image-frame">
-            <img id="cameraImage" alt="Camera feed" />
-            <div id="imagePlaceholder" class="placeholder">No frame received yet</div>
+          <div class="stream-layout">
+            <div class="image-frame">
+              <img id="cameraImage" alt="Camera feed" />
+              <div id="imagePlaceholder" class="placeholder">No frame received yet</div>
+            </div>
+
+            <aside class="conversation-panel">
+              <div class="conversation-header">
+                <div>
+                  <h3>Agent State</h3>
+                  <p>Conversation turns from the telemetry stream.</p>
+                </div>
+                <span class="panel-meta">Structured view</span>
+              </div>
+              <div id="agentState" class="conversation-list"></div>
+            </aside>
           </div>
         </article>
 
@@ -76,14 +89,6 @@
             <span id="motorCount" class="panel-meta">0 values</span>
           </div>
           <div id="motorCommands" class="command-list"></div>
-        </article>
-
-        <article class="panel span-2">
-          <div class="panel-header">
-            <h2>Agent State</h2>
-            <span class="panel-meta">Raw JSON payload</span>
-          </div>
-          <pre id="agentState" class="json-block">{}</pre>
         </article>
 
         <article class="panel span-2">
