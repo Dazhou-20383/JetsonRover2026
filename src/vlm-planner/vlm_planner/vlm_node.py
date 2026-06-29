@@ -83,7 +83,12 @@ class VLMNode(Node):
             tool_calls = getattr(message, 'tool_calls', None) or []
 
             if content:
-                self.current_state['history'].append(message)
+                assistant_message = {
+                    "role": "assistant",
+                    "content": content,
+                }
+                self.current_state['history'].append(assistant_message)
+
             self.get_logger().info(f"Agent response: {content}")
 
             for tool_call in tool_calls:
@@ -103,10 +108,10 @@ class VLMNode(Node):
                 })
 
             self.state_pub.publish(String(data=json.dumps(self.current_state['history'])))
-            self.get_logger().info(f"Current state history: {list(self.current_state['history'])}")
         except Exception as exc:
             self.get_logger().error(f'Agent loop failed: {exc}')
-
+            
+        self.get_logger().info(f"Current state history: {list(self.current_state['history'])}")
         self._loop_agent()
 
     def log_history_to_disk(self, record):
