@@ -37,7 +37,7 @@ def generate_launch_description():
 			)
 		),
 		Node(
-			package='video-logger',
+			package='video_logger',
 			executable='dashboard_node',
 			name='dashboard_node',
 			output='screen',
