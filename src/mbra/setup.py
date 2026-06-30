@@ -13,6 +13,7 @@ setup(
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'config'), glob('mbra/train/config/*.yaml')),
+        (os.path.join('share', package_name, 'model_weights'), glob('model_weights/*')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
