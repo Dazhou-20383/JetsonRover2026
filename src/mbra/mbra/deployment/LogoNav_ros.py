@@ -213,8 +213,8 @@ class MBRANode(Node):
                 
                 goal_pose_torch = torch.from_numpy(goal_pose).unsqueeze(0).float().to(self.device)
                 
-                self.get_logger().info(f"robot pose {self.x_position} {self.y_position} {self.yaw_angle}")
-                self.get_logger().info(f"relative pose {goal_pose[0]*metric_waypoint_spacing} {goal_pose[1]*metric_waypoint_spacing} {goal_pose[2]} {goal_pose[3]} {self.id_goal}")            
+                self.get_logger().debug(f"robot pose {self.x_position} {self.y_position} {self.yaw_angle}")
+                self.get_logger().debug(f"relative pose {goal_pose[0]*metric_waypoint_spacing} {goal_pose[1]*metric_waypoint_spacing} {goal_pose[2]} {goal_pose[3]} {self.id_goal}")            
                 with torch.no_grad():  
                     waypoints = self.model(batch_obs_images, goal_pose_torch)         
                 waypoints = to_numpy(waypoints)
@@ -250,7 +250,7 @@ class MBRANode(Node):
             msg_pub = Twist()
             msg_raw = Twist()
             
-            self.get_logger().info(f"linear vel {linear_vel_value} angular_vel {angular_vel_value}")
+            self.get_logger().debug(f"linear vel {linear_vel_value} angular_vel {angular_vel_value}")
             vt = linear_vel_value
             wt = angular_vel_value
 
@@ -306,7 +306,7 @@ class MBRANode(Node):
                         msg_pub.angular.z = maxw * np.sign(wt)
 
             self.publisher_.publish(msg_pub)
-            self.get_logger().info(f"linear vel {msg_pub.linear.x} angular_vel {msg_pub.angular.z}")             
+            self.get_logger().debug(f"linear vel {msg_pub.linear.x} angular_vel {msg_pub.angular.z}")             
 
 def main(args=None):
     rclpy.init(args=args)
