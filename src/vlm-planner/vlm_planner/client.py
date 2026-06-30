@@ -14,7 +14,7 @@ class OllamaClient:
                  tools=None,
                  max_tokens=1024, 
                  think=False,
-                 server_ip="localhost",
+                 server_ip="10.42.0.221",
                  **kwargs):
         
         self.tools = tools or []
