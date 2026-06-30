@@ -6,8 +6,8 @@
       "type": "lldb",
       "request": "launch",
       "args": [],
-      "cwd": "/Users/zhangboya/Documents/Github/JetsonRover2026/NVMM-interface",
-      "program": "/Users/zhangboya/Documents/Github/JetsonRover2026/NVMM-interface/build/Debug/outDebug"
+      "cwd": "/Users/zhangboya/Documents/Github/JetsonRover2026",
+      "program": "/Users/zhangboya/Documents/Github/JetsonRover2026/build/Debug/outDebug"
     }
   ]
 }

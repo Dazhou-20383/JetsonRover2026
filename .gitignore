@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # ROS2 / colcon
 build/
 install/
@@ -19,3 +20,27 @@ cuda-keyring_1.1-1_all.deb
 
 src/mbra/mbra/deployment/latest
 src/mbra/mbra/deployment/model_weights
+=======
+train/wandb
+train/logs
+deployment/model_weights
+__pycache__/
+*.pyc
+dataset
+lerobot
+map_cache
+train/vint_train/data/sampler
+train/config/LogoNav_.yaml
+download_youtube/videos
+.venv/
+src/mbra/mbra/deployment/latest
+build
+build/
+install
+install/
+log
+log/
+*.pth
+*.deb
+.vscode/
+>>>>>>> feature/mbra
