@@ -42,4 +42,10 @@ def generate_launch_description():
 			name='dashboard_node',
 			output='screen',
 		),
+		Node(
+			package='mbra',
+			executable='logonav_node',
+			name='logonav_node',
+			output='screen',
+		)
 	])

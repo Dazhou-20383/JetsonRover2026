@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
 import os
@@ -308,10 +308,14 @@ class MBRANode(Node):
 
 def main(args=None):
     rclpy.init(args=args)
-    logonav_node = MBRANode()
-    logonav_node.get_logger().info('waiting message .....')
-    rclpy.spin(logonav_node)
-    rclpy.shutdown()
+    node = MBRANode()
+    try:
+        rclpy.spin(node)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        node.destroy_node()
+        rclpy.try_shutdown()
 
 if __name__ == '__main__':
     main()
