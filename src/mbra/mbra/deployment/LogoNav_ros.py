@@ -9,7 +9,7 @@ from scipy.spatial.transform import Rotation as R
 #ROS
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, PoseStamped
+from geometry_msgs.msg import Twist, Pose2D, Point
 from sensor_msgs.msg import Image
 
 #torch
@@ -113,15 +113,18 @@ class MBRANode(Node):
             self.img_sub_callback,
             10)
         self.pose_sub = self.create_subscription(
-            PoseStamped, '/odom', self.pose_callback, 10)
+            Pose2D, '/robot/pose', self.pose_callback, 10)
         
-        self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.goal_sub = self.create_subscription(
+            Point, '/mbra/waypoints', self.goal_callback, 10)
+        
+        self.publisher_ = self.create_publisher(Twist, '/mbra/cmd_vel', 10)
         self.timer = self.create_timer(0.1, self.timer_callback)
         self.latest_image = None
 
         #goal pose on the global coordinate (you can give list to have subgoals.)
         self.xy_subgoal = [[8.0, -10.0]]
-        self.yaw_subgoal = [-90.0/180*3.14]  
+        self.yaw_subgoal = [0]  
 
         self.x_position = 0.0
         self.y_position = 0.0
@@ -131,8 +134,6 @@ class MBRANode(Node):
         self.store_hist = 0
         self.init_hist = 0
         self.image_hist = []
-        
-        bridge = CvBridge()
 
     def img_sub_callback(self, msg):
         self.latest_image = msg
@@ -143,12 +144,14 @@ class MBRANode(Node):
             self.latest_image = None
 
     def pose_callback(self, msg):
-        self.x_position = msg.pose.pose.position.x
-        self.y_position = msg.pose.pose.position.y
-        orientation_q = msg.pose.pose.orientation
-        orientation_list = [orientation_q.x, orientation_q.y, orientation_q.z, orientation_q.w]
-        r = R.from_quat(orientation_list)
-        _, _, self.yaw_angle = r.as_euler('xyz')
+        self.x_position = msg.x
+        self.y_position = msg.y
+        self.yaw_angle = msg.theta / 180 * np.pi  # Convert degrees to radians
+
+    def goal_callback(self, msg):
+        self.xy_subgoal = [[msg.x, msg.y]]
+        self.yaw_subgoal = [msg.z / 180 * np.pi]  # Assuming z is used for yaw in this context
+        self.id_goal = 0  # Reset goal index when a new goal is received
 
     def callback_logonav(self, msg_1):
 

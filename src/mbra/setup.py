@@ -28,6 +28,7 @@ setup(
     entry_points={
         'console_scripts': [
             'logonav_node = mbra.deployment.LogoNav_ros:main'
+            'test_goal_node = mbra.test.manual_goal_test:main'
         ],
     },
 )
