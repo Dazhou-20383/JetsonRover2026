@@ -4,7 +4,7 @@ import numpy as np
 
 class Homography:
     def __init__(self,):
-        self.matrix = None
+        self.matrix = np.identity(3)
         # Example dst_points in the rover frame in meters
         self.dst_points = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float32)
 

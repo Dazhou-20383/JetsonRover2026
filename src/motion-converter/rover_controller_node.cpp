@@ -79,8 +79,6 @@ private:
     std::lock_guard<std::mutex> lock(mutex_);
     mbra_linear_ = msg->linear.x;
     mbra_angular_ = msg->angular.z;
-    RCLCPP_INFO(get_logger(), "Received cmd_vel: linear_x=%.3f, angular_z=%.3f", mbra_linear_,
-                mbra_angular_);
   }
 
   void stopCallback(const std::shared_ptr<action_msgs::srv::StopSrv::Request> /*request*/,
@@ -119,7 +117,6 @@ private:
     std::lock_guard<std::mutex> lock(mutex_);
 
     yaw_deg_ = normalizeDeg(msg->theta);
-    RCLCPP_INFO(get_logger(), "Received pose: yaw=%.2f deg", yaw_deg_);
   }
 
   void controlLoop() {
