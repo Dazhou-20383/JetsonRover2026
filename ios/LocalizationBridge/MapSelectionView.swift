@@ -1,32 +1,49 @@
 import CoreLocation
+import ARKit
+import AVFoundation
 import MapKit
+import RealityKit
 import SwiftUI
 
 struct CombinedNavigationView: View {
     @EnvironmentObject private var sessionManager: ARSessionManager
     @EnvironmentObject private var viewModel: MapViewModel
+    @EnvironmentObject private var debugLogStore: DebugLogStore
 
     var body: some View {
-        WaypointMapView(
-            selectedCoordinate: $viewModel.selectedCoordinate,
-            userLocation: viewModel.currentCoordinate,
-            hasCenteredOnUser: $viewModel.hasCenteredOnUser,
-            onLongPress: viewModel.selectWaypoint(at:),
-            recenterTrigger: viewModel.recenterRequestID
-        )
-        .overlay(alignment: .topLeading) {
-            VStack(alignment: .leading, spacing: 12) {
-                PoseOverlayCard(
-                    poseText: sessionManager.latestPoseText,
-                    statusText: sessionManager.statusText
-                )
-                PermissionBanner(message: viewModel.statusMessage)
+        ZStack {
+            ARSessionView(session: sessionManager.session)
+                .allowsHitTesting(false)
+                .ignoresSafeArea()
+
+            WaypointMapView(
+                selectedCoordinate: $viewModel.selectedCoordinate,
+                userLocation: viewModel.currentCoordinate,
+                hasCenteredOnUser: $viewModel.hasCenteredOnUser,
+                locationStore: viewModel.locationManager,
+                onLongPress: viewModel.selectWaypoint(at:),
+                recenterTrigger: viewModel.recenterRequestID
+            )
+
+            VStack {
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 12) {
+                        PoseOverlayCard(
+                            poseText: sessionManager.latestPoseText,
+                            statusText: sessionManager.statusText
+                        )
+                        PermissionBanner(message: viewModel.statusMessage)
+                        DebugLogCard(entries: debugLogStore.entries)
+                    }
+                    .padding()
+
+                    Spacer()
+
+                    RecenterButton(action: viewModel.recenterOnUser)
+                        .padding()
+                }
+                Spacer()
             }
-            .padding()
-        }
-        .overlay(alignment: .topTrailing) {
-            RecenterButton(action: viewModel.recenterOnUser)
-                .padding()
         }
         .navigationTitle("Localization Bridge")
         .navigationBarTitleDisplayMode(.inline)
@@ -62,6 +79,25 @@ struct CombinedNavigationView: View {
     }
 }
 
+private struct ARSessionView: UIViewRepresentable {
+    let session: ARSession
+
+    func makeUIView(context: Context) -> ARView {
+        let view = ARView(frame: .zero)
+        view.automaticallyConfigureSession = false
+        view.session = session
+        view.environment.background = .color(.clear)
+        view.isUserInteractionEnabled = false
+        return view
+    }
+
+    func updateUIView(_ uiView: ARView, context: Context) {
+        if uiView.session !== session {
+            uiView.session = session
+        }
+    }
+}
+
 private struct MetricRow: View {
     let title: String
     let value: String
@@ -88,6 +124,47 @@ private struct PermissionBanner: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
             .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
+    }
+}
+
+private struct DebugLogCard: View {
+    let entries: [String]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Debug Log")
+                .font(.headline)
+
+            if entries.isEmpty {
+                Text("Waiting for events...")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 4) {
+                            ForEach(Array(entries.enumerated()), id: \.offset) { index, entry in
+                                Text(entry)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .id(index)
+                            }
+                        }
+                        .onChange(of: entries.count) { _, _ in
+                            guard let lastIndex = entries.indices.last else { return }
+                            withAnimation {
+                                proxy.scrollTo(lastIndex, anchor: .bottom)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 120)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: 260)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 14))
     }
 }
 
@@ -279,6 +356,7 @@ private struct WaypointMapView: UIViewRepresentable {
     @Binding var selectedCoordinate: CLLocationCoordinate2D?
     let userLocation: CLLocationCoordinate2D?
     @Binding var hasCenteredOnUser: Bool
+    let locationStore: LocationManager
     let onLongPress: (CLLocationCoordinate2D) -> Void
     let recenterTrigger: Int
 
@@ -308,6 +386,7 @@ private struct WaypointMapView: UIViewRepresentable {
     func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.parent = self
         context.coordinator.updateSelectedAnnotation(on: mapView)
+        locationStore.update(location: mapView.userLocation.location)
 
         if context.coordinator.lastRecenterTrigger != recenterTrigger {
             context.coordinator.lastRecenterTrigger = recenterTrigger
@@ -348,6 +427,10 @@ private struct WaypointMapView: UIViewRepresentable {
         init(_ parent: WaypointMapView) {
             self.parent = parent
             lastRecenterTrigger = parent.recenterTrigger
+        }
+
+        func mapView(_ mapView: MKMapView, didUpdate userLocation: MKUserLocation) {
+            parent.locationStore.update(location: userLocation.location)
         }
 
         @objc

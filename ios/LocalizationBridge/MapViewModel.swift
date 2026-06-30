@@ -35,36 +35,28 @@ final class MapViewModel: ObservableObject {
     @Published private(set) var routeGuidance: RouteGuidance?
     @Published private(set) var isPlanningRoute = false
 
-    let locationManager = LocationManager()
+    let locationManager: LocationManager
 
     private let networkManager: NetworkManager
+    private let debugLogStore: DebugLogStore
     private let encoder: JSONEncoder
     private var cancellables = Set<AnyCancellable>()
     private var routeTask: Task<Void, Never>?
 
-    init(networkManager: NetworkManager) {
+    init(networkManager: NetworkManager, debugLogStore: DebugLogStore) {
         self.networkManager = networkManager
+        self.debugLogStore = debugLogStore
+        self.locationManager = LocationManager()
 
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
         self.encoder = encoder
 
+        debugLogStore.append("Map: initialized")
+
         locationManager.$currentLocation
             .sink { [weak self] (_: CLLocation?) in
                 self?.refreshPreview()
-            }
-            .store(in: &cancellables)
-
-        locationManager.$headingDegrees
-            .sink { [weak self] (_: Double?) in
-                self?.refreshPreview()
-            }
-            .store(in: &cancellables)
-
-        locationManager.$errorMessage
-            .compactMap { $0 }
-            .sink { [weak self] message in
-                self?.statusMessage = message
             }
             .store(in: &cancellables)
     }
@@ -128,13 +120,12 @@ final class MapViewModel: ObservableObject {
     }
 
     func onAppear() {
-        locationManager.requestPermissionsIfNeeded()
-        locationManager.startUpdates()
+        debugLogStore.append("Map: onAppear")
         refreshPreview()
     }
 
     func onDisappear() {
-        locationManager.stopUpdates()
+        debugLogStore.append("Map: onDisappear")
         routeTask?.cancel()
     }
 
@@ -151,6 +142,7 @@ final class MapViewModel: ObservableObject {
         routeGuidance = nil
         isPlanningRoute = false
         statusMessage = "Waypoint selected. Review the payload and send when ready."
+        debugLogStore.append(String(format: "Map: waypoint selected lat=%.6f lon=%.6f", coordinate.latitude, coordinate.longitude))
         refreshPreview()
     }
 
@@ -166,6 +158,7 @@ final class MapViewModel: ObservableObject {
             let json = try networkManager.sendMessage(message)
             jsonPreview = prettyPrintedJSON(from: json) ?? json
             statusMessage = "Goal sent to Jetson. Planning route guidance..."
+            debugLogStore.append("Map: goal sent")
             isPlanningRoute = true
             nextStepBuffer = nil
             routeInstructionBuffer = []
@@ -174,6 +167,7 @@ final class MapViewModel: ObservableObject {
             return true
         } catch {
             statusMessage = error.localizedDescription
+            debugLogStore.append("Map: goal send failed - \(error.localizedDescription)")
             return false
         }
     }

@@ -3,8 +3,7 @@ import CoreLocation
 import Foundation
 
 @MainActor
-final class LocationManager: NSObject, ObservableObject {
-    @Published private(set) var authorizationStatus: CLAuthorizationStatus
+final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published private(set) var currentLocation: CLLocation?
     @Published private(set) var headingDegrees: Double?
     @Published private(set) var errorMessage: String?
@@ -12,84 +11,70 @@ final class LocationManager: NSObject, ObservableObject {
     private let manager = CLLocationManager()
 
     override init() {
-        authorizationStatus = manager.authorizationStatus
         super.init()
-
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
-        manager.distanceFilter = kCLDistanceFilterNone
-        manager.headingFilter = 1
+        errorMessage = "Waiting for map location updates..."
     }
 
-    func requestPermissionsIfNeeded() {
-        switch authorizationStatus {
+    /// Explicitly triggers the system location permission prompt. Call this once,
+    /// from a single known place (e.g. app/root view onAppear), rather than relying
+    /// on MKMapView's implicit prompting, which only fires once per install and can
+    /// race with other permission prompts (e.g. the camera prompt) on the same frame.
+    func requestAuthorization() {
+        let status = manager.authorizationStatus
+        switch status {
         case .notDetermined:
             manager.requestWhenInUseAuthorization()
-        case .authorizedAlways, .authorizedWhenInUse:
-            startUpdates()
-        case .restricted, .denied:
-            errorMessage = "Location access is disabled. Enable While Using the App in Settings."
-        @unknown default:
-            errorMessage = "Location authorization is unavailable."
-        }
-    }
-
-    func startUpdates() {
-        guard CLLocationManager.locationServicesEnabled() else {
-            errorMessage = "Location services are disabled on this device."
-            return
-        }
-
-        manager.startUpdatingLocation()
-
-        if CLLocationManager.headingAvailable() {
+        case .authorized, .authorizedAlways, .authorizedWhenInUse:
             manager.startUpdatingHeading()
+        case .denied, .restricted:
+            errorMessage = "Location permission denied. Enable Location in Settings."
+        @unknown default:
+            break
         }
     }
 
-    func stopUpdates() {
-        manager.stopUpdatingLocation()
-        manager.stopUpdatingHeading()
-    }
-}
-
-extension LocationManager: CLLocationManagerDelegate {
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor in
-            authorizationStatus = manager.authorizationStatus
-
-            switch authorizationStatus {
-            case .authorizedAlways, .authorizedWhenInUse:
-                errorMessage = nil
-                startUpdates()
+            switch manager.authorizationStatus {
+            case .authorized, .authorizedAlways, .authorizedWhenInUse:
+                self.errorMessage = nil
+                manager.startUpdatingHeading()
             case .denied, .restricted:
-                errorMessage = "Location access is disabled. Enable While Using the App in Settings."
+                self.errorMessage = "Location permission denied. Enable Location in Settings."
             case .notDetermined:
                 break
             @unknown default:
-                errorMessage = "Location authorization is unavailable."
+                break
             }
         }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        guard newHeading.headingAccuracy >= 0 else { return }
+        let value = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
         Task { @MainActor in
-            currentLocation = locations.last
+            self.update(headingDegrees: value)
+        }
+    }
+
+    func update(location: CLLocation?) {
+        currentLocation = location
+        if location == nil, errorMessage == nil {
+            errorMessage = "Waiting for map location updates..."
+        } else if location != nil {
             errorMessage = nil
         }
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        let heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
-
-        Task { @MainActor in
-            headingDegrees = heading >= 0 ? heading : nil
-        }
+    func update(headingDegrees: Double?) {
+        self.headingDegrees = headingDegrees
     }
 
-    nonisolated func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        Task { @MainActor in
-            errorMessage = error.localizedDescription
-        }
+    func clear() {
+        currentLocation = nil
+        headingDegrees = nil
+        errorMessage = "Waiting for map location updates..."
     }
 }
