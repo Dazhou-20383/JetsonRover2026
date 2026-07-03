@@ -1,4 +1,5 @@
 import base64
+import os
 import re
 import cv2
 import json
@@ -14,16 +15,17 @@ class OllamaClient:
                  tools=None,
                  max_tokens=1024, 
                  think=False,
-                 server_ip="10.42.0.221",
+                 server_ip=None,
                  **kwargs):
         
         self.tools = tools or []
         self.model = model
         self.max_tokens = max_tokens
         self.think = think
+        self.server_ip = server_ip or os.environ.get('OLLAMA_SERVER_IP', 'localhost')
         
         self.bridge = CvBridge()
-        self.client = OpenAI(base_url=f"http://{server_ip}:11434/v1", api_key="not-needed")
+        self.client = OpenAI(base_url=f"http://{self.server_ip}:11434/v1", api_key="not-needed")
 
     def get_response(self, state):
         img = state['current_observation']

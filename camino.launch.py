@@ -2,6 +2,8 @@ import os
 
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
+from launch.actions import DeclareLaunchArgument
+from launch.substitutions import LaunchConfiguration
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch_ros.actions import Node
@@ -9,6 +11,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 	return LaunchDescription([
+		DeclareLaunchArgument(
+			'ollama_server_ip',
+			default_value='localhost',
+			description='Ollama server IP address',
+		),
 		IncludeLaunchDescription(
 			PythonLaunchDescriptionSource(
 				os.path.join(
@@ -34,7 +41,10 @@ def generate_launch_description():
 					'launch',
 					'agent.launch.py',
 				)
-			)
+			),
+			launch_arguments={
+				'ollama_server_ip': LaunchConfiguration('ollama_server_ip'),
+			}.items(),
 		),
 		Node(
 			package='video_logger',
