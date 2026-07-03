@@ -2,6 +2,7 @@
 #include <memory>
 #include <mutex>
 
+#include <std_msgs/msg/bool.hpp>
 #include <geometry_msgs/msg/pose2_d.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
@@ -54,6 +55,8 @@ public:
 
     publisher_ = create_publisher<geometry_msgs::msg::Twist>("/motion/cmd_vel", 10);
 
+    mbra_enable_pub_ = create_publisher<std_msgs::msg:Bool>(
+        "/mbra/enable", 10);
     // Keep publishing/turn-control in a timer instead of blocking inside callbacks.
     control_timer_ = create_wall_timer(
         std::chrono::milliseconds(20),
@@ -110,6 +113,7 @@ private:
     mbra_enabled_ = request->enable;
     response->success = true;
     response->error.clear();
+    mbra_enable_pub_->publish(std_msgs::msg::Bool{mbra_enabled_});
     RCLCPP_INFO(get_logger(), "MBRA enabled: %s", mbra_enabled_ ? "true" : "false");
   }
 
@@ -152,7 +156,8 @@ private:
   rclcpp::Service<action_msgs::srv::TurnSrv>::SharedPtr turn_srv_;
   rclcpp::Service<action_msgs::srv::EnableMBRASrv>::SharedPtr mbra_enable_srv_;
   rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
-
+  
+  rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr mbra_enable_pub_;
   rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr publisher_;
   rclcpp::TimerBase::SharedPtr control_timer_;
 

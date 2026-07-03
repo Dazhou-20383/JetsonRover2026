@@ -11,6 +11,7 @@ import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist, Pose2D, Point
 from sensor_msgs.msg import Image
+from std_msgs.msg import Bool
 
 #torch
 import torch
@@ -120,6 +121,9 @@ class MBRANode(Node):
         self.goal_sub = self.create_subscription(
             Point, '/mbra/waypoints', self.goal_callback, 10)
         
+        self.mbra_enable_sub = self.create_subscription(
+            Bool, '/mbra/enable', self.mbra_enable_callback, 10)
+        
         self.publisher_ = self.create_publisher(Twist, '/mbra/cmd_vel', 10)
         self.timer = self.create_timer(0.1, self.timer_callback)
         self.latest_image = None
@@ -136,6 +140,8 @@ class MBRANode(Node):
         self.store_hist = 0
         self.init_hist = 0
         self.image_hist = []
+
+        self.mbra_enable = False
 
     def img_sub_callback(self, msg):
         self.latest_image = msg
@@ -155,9 +161,16 @@ class MBRANode(Node):
         self.yaw_subgoal = [msg.z / 180 * np.pi]  # Assuming z is used for yaw in this context
         self.id_goal = 0  # Reset goal index when a new goal is received
 
+    def mbra_enable_callback(self, msg):
+        self.mbra_enable = msg.data
+        if self.mbra_enable:
+            self.get_logger().info("MBRA enabled.")
+        else:
+            self.get_logger().info("MBRA disabled.")
+
     def callback_logonav(self, msg_1):
 
-        if True:
+        if self.mbra_enable:
             newsize = self.model_params["image_size"]   
             context_size = self.model_params["context_size"]
             im = msg_to_pil(msg_1)

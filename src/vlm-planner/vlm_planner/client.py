@@ -79,7 +79,7 @@ class OllamaClient:
 
         if not image:
             print("No image provided to point_image, returning (0, 0)")
-            return (0, 0)
+            return 0, 0
 
         image_url = f"data:image/jpeg;base64,{image}"
 

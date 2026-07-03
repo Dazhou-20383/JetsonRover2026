@@ -1,5 +1,6 @@
 import os
 import base64
+import time
 from vlm_planner.client import OllamaClient
 from vlm_planner.tools import tools
 
@@ -43,9 +44,12 @@ if __name__ == "__main__":
     # test_get_response()
     # test_get_response()
     # print("finish text test")
-    # test_point_image()
-    # test_point_image()
-    # print("finish point image test")
-    test_tool_use()
-    test_tool_use()
-    print("finish tool use test")
+    test_point_image()
+    test_point_image()
+    start = time.time()
+    test_point_image()
+    end = time.time()
+    print(f"Time taken for point_image test: {end - start:.2f} seconds")
+    # test_tool_use()
+    # test_tool_use()
+    # print("finish tool use test")
