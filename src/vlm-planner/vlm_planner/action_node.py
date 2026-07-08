@@ -11,6 +11,7 @@ import json
 import signal
 from typing import Any, Dict, Tuple
 import threading
+import time
 
 from .client import OllamaClient
 from .utils import Homography
@@ -64,7 +65,15 @@ class ActionServer(Node):
         }
 
     def init_homography(self):
-        img = self.camera_client.call(ImageSrv.Request()).image
+        req = ImageSrv.Request()
+        req.enable = True
+
+        try:
+            img = self._call_and_wait(self.camera_client, req, timeout=10).image
+        except Exception as e:
+            self.get_logger().error(f'Failed to get image from camera service: {e}')
+            time.sleep(2)
+            self.init_homography()
 
         cv_image = self.bridge.imgmsg_to_cv2(img, desired_encoding='bgr8')
 
@@ -75,6 +84,7 @@ class ActionServer(Node):
         self.homography.set_image(img_base64)
         self.homography.get_source_points()
         self.homography.set_matrix()
+        self.get_logger().info('Homography matrix initialized.')
 
     def action_handler(self, request, response):
         self.get_logger().info(f'Received action: {request.tool_name} with payload: {request.args_json}')
