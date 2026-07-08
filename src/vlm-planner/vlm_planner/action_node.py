@@ -68,6 +68,11 @@ class ActionServer(Node):
         req = ImageSrv.Request()
         req.temp = True
 
+        if not self.mbra_client.wait_for_service(timeout_sec=2.0):
+            msg = 'Camera service not available'
+            self.get_logger().error(msg)
+            raise RuntimeError(msg)
+
         try:
             img = self._call_and_wait(self.camera_client, req, timeout=10).image
         except Exception as e:
