@@ -4,8 +4,8 @@ from rclpy.callback_groups import ReentrantCallbackGroup
 from rclpy.executors import MultiThreadedExecutor
 
 from geometry_msgs.msg import Point, Pose2D
-from action_msgs.srv import Tool
-from action_msgs.srv import ImageSrv, StopSrv, TurnSrv, EnableMBRASrv
+from custom_msgs.srv import Tool
+from custom_msgs.srv import ImageSrv, StopSrv, TurnSrv, EnableMBRASrv
 
 import json
 import signal
@@ -35,7 +35,7 @@ class ActionServer(Node):
         # Route from camera
         self.camera_client = self.create_client(ImageSrv, '/sensor/image', callback_group=self.client_cb_group)
 
-        # Service clients for low-level rover commands. Use typed services defined in action_msgs.
+        # Service clients for low-level rover commands. Use typed services defined in custom_msgs.
         self.stop_client = self.create_client(StopSrv, '/actions/stop', callback_group=self.client_cb_group)
         self.turn_client = self.create_client(TurnSrv, '/actions/turn', callback_group=self.client_cb_group)
         self.mbra_client = self.create_client(EnableMBRASrv, '/actions/enable_mbra', callback_group=self.client_cb_group)

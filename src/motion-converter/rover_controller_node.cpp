@@ -6,9 +6,9 @@
 #include <geometry_msgs/msg/pose2_d.hpp>
 #include <geometry_msgs/msg/twist.hpp>
 #include <rclcpp/rclcpp.hpp>
-#include <action_msgs/srv/enable_mbra_srv.hpp>
-#include <action_msgs/srv/stop_srv.hpp>
-#include <action_msgs/srv/turn_srv.hpp>
+#include <custom_msgs/srv/enable_mbra_srv.hpp>
+#include <custom_msgs/srv/stop_srv.hpp>
+#include <custom_msgs/srv/turn_srv.hpp>
 
 class RoverControllerNode : public rclcpp::Node {
 public:
@@ -34,17 +34,17 @@ public:
         "/mbra/cmd_vel", 10,
         std::bind(&RoverControllerNode::cmdVelCallback, this, std::placeholders::_1));
 
-    stop_srv_ = create_service<action_msgs::srv::StopSrv>(
+    stop_srv_ = create_service<custom_msgs::srv::StopSrv>(
       "/actions/stop",
       std::bind(&RoverControllerNode::stopCallback, this, std::placeholders::_1,
             std::placeholders::_2));
 
-    turn_srv_ = create_service<action_msgs::srv::TurnSrv>(
+    turn_srv_ = create_service<custom_msgs::srv::TurnSrv>(
       "/actions/turn",
       std::bind(&RoverControllerNode::turnCallback, this, std::placeholders::_1,
             std::placeholders::_2));
 
-    mbra_enable_srv_ = create_service<action_msgs::srv::EnableMBRASrv>(
+    mbra_enable_srv_ = create_service<custom_msgs::srv::EnableMBRASrv>(
       "/actions/enable_mbra",
       std::bind(&RoverControllerNode::mbraEnableCallback, this, std::placeholders::_1,
             std::placeholders::_2));
@@ -84,8 +84,8 @@ private:
     mbra_angular_ = msg->angular.z;
   }
 
-  void stopCallback(const std::shared_ptr<action_msgs::srv::StopSrv::Request> /*request*/,
-                    std::shared_ptr<action_msgs::srv::StopSrv::Response> response) {
+  void stopCallback(const std::shared_ptr<custom_msgs::srv::StopSrv::Request> /*request*/,
+                    std::shared_ptr<custom_msgs::srv::StopSrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
     action_linear_ = 0.0;
     action_angular_ = 0.0;
@@ -95,8 +95,8 @@ private:
     RCLCPP_INFO(get_logger(), "Received stop command, stopping the rover.");
   }
 
-  void turnCallback(const std::shared_ptr<action_msgs::srv::TurnSrv::Request> request,
-                    std::shared_ptr<action_msgs::srv::TurnSrv::Response> response) {
+  void turnCallback(const std::shared_ptr<custom_msgs::srv::TurnSrv::Request> request,
+                    std::shared_ptr<custom_msgs::srv::TurnSrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     target_yaw_deg_ = normalizeDeg(static_cast<double>(request->orientation));
@@ -107,8 +107,8 @@ private:
     RCLCPP_INFO(get_logger(), "Received turn command: target_yaw=%.2f deg", target_yaw_deg_);
   }
 
-  void mbraEnableCallback(const std::shared_ptr<action_msgs::srv::EnableMBRASrv::Request> request,
-                          std::shared_ptr<action_msgs::srv::EnableMBRASrv::Response> response) {
+  void mbraEnableCallback(const std::shared_ptr<custom_msgs::srv::EnableMBRASrv::Request> request,
+                          std::shared_ptr<custom_msgs::srv::EnableMBRASrv::Response> response) {
     std::lock_guard<std::mutex> lock(mutex_);
     mbra_enabled_ = request->enable;
     response->success = true;
@@ -154,9 +154,9 @@ private:
   std::mutex mutex_;
 
   rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
-  rclcpp::Service<action_msgs::srv::StopSrv>::SharedPtr stop_srv_;
-  rclcpp::Service<action_msgs::srv::TurnSrv>::SharedPtr turn_srv_;
-  rclcpp::Service<action_msgs::srv::EnableMBRASrv>::SharedPtr mbra_enable_srv_;
+  rclcpp::Service<custom_msgs::srv::StopSrv>::SharedPtr stop_srv_;
+  rclcpp::Service<custom_msgs::srv::TurnSrv>::SharedPtr turn_srv_;
+  rclcpp::Service<custom_msgs::srv::EnableMBRASrv>::SharedPtr mbra_enable_srv_;
   rclcpp::Subscription<geometry_msgs::msg::Pose2D>::SharedPtr pose_sub_;
   
   rclcpp::Publisher<std_msgs::msg::Bool>::SharedPtr mbra_enable_pub_;

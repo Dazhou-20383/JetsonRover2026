@@ -7,7 +7,7 @@ import socket
 import struct
 import pickle
 from sensor_msgs.msg import Image
-from action_msgs.srv import ImageSrv
+from custom_msgs.srv import ImageSrv
 from cv_bridge import CvBridge
 
 class CameraNode(Node):
