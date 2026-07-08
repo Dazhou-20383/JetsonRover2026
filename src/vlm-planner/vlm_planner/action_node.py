@@ -66,7 +66,7 @@ class ActionServer(Node):
 
     def init_homography(self):
         req = ImageSrv.Request()
-        req.enable = True
+        req.temp = True
 
         try:
             img = self._call_and_wait(self.camera_client, req, timeout=10).image
