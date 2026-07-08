@@ -49,6 +49,7 @@ class ActionServer(Node):
         self.vlm = OllamaClient()
         self.bridge = CvBridge()
         self.homography = Homography()
+        self.init_homography()
 
         self.get_logger().info('Action Node has been started.')
 
@@ -62,6 +63,18 @@ class ActionServer(Node):
             'place_waypoint_precise': self.place_waypoint_precise,
         }
 
+    def init_homography(self):
+        img = self.camera_client.call(ImageSrv.Request()).image
+
+        cv_image = self.bridge.imgmsg_to_cv2(img, desired_encoding='bgr8')
+
+        # 2. Compress the image to JPEG memory buffer
+        success, encoded_image = cv2.imencode('.jpg', cv_image)
+        img_base64 = base64.b64encode(encoded_image.tobytes()).decode('utf-8')
+
+        self.homography.set_image(img_base64)
+        self.homography.get_source_points()
+        self.homography.set_matrix()
 
     def action_handler(self, request, response):
         self.get_logger().info(f'Received action: {request.tool_name} with payload: {request.args_json}')

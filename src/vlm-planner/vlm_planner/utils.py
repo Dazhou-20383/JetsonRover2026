@@ -20,12 +20,11 @@ def _json_request(url, payload=None):
     except urllib.error.URLError as exc:
         raise RuntimeError(f"Homography server request failed: {exc}") from exc
 
-
 class Homography:
-    def __init__(self, server_url="http://127.0.0.1:8080"):
+    def __init__(self, server_url="http://192.168.55.100:8080"):
         self.server_url = server_url.rstrip("/")
         self.matrix = None
-        self.dst_points = np.array([[0, 0], [1, 0], [1, 1], [0, 1]], dtype=np.float32)
+        self.dst_points = np.array([[1, 0.5], [1, -0.5], [2, 0.5], [2, -0.5]], dtype=np.float32)
         self.image_b64 = None
         self.content_type = "image/jpeg"
 
@@ -49,13 +48,8 @@ class Homography:
         if len(annotations) < 4:
             raise ValueError("Need at least four annotations from the homography server.")
 
-        image = cv2.imdecode(
-            np.frombuffer(base64.b64decode(self.image_b64), dtype=np.uint8),
-            cv2.IMREAD_COLOR,
-        )
-        height, width = image.shape[:2]
         return np.array(
-            [[point["x"] * width / 100.0, point["y"] * height / 100.0] for point in annotations[:4]],
+            [[point["x"], point["y"]] for point in annotations[:4]],
             dtype=np.float32,
         )
 
