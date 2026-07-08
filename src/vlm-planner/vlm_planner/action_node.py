@@ -67,10 +67,15 @@ class ActionServer(Node):
         req = ImageSrv.Request()
         req.temp = True
 
-        if not self.camera_client.wait_for_service(timeout_sec=2.0):
-            msg = 'Camera service not available'
-            self.get_logger().error(msg)
-            raise RuntimeError(msg)
+        while attempts := 0 <= 5:
+            if not self.camera_client.wait_for_service(timeout_sec=2.0):
+                attempts += 1
+                if attempts == 5:
+                    raise RuntimeError('Camera service not available after 5 attempts')
+                self.get_logger().warn(f'Camera service not available, attempt {attempts}/5')
+                time.sleep(2)
+            else:
+                break
 
         try:
             img = self._call_and_wait(self.camera_client, req).image
