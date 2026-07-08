@@ -55,7 +55,7 @@ public:
 
     publisher_ = create_publisher<geometry_msgs::msg::Twist>("/motion/cmd_vel", 10);
 
-    mbra_enable_pub_ = create_publisher<std_msgs::msg:Bool>(
+    mbra_enable_pub_ = create_publisher<std_msgs::msg::Bool>(
         "/mbra/enable", 10);
     // Keep publishing/turn-control in a timer instead of blocking inside callbacks.
     control_timer_ = create_wall_timer(
