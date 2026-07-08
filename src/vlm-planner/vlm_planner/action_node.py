@@ -50,7 +50,6 @@ class ActionServer(Node):
         self.vlm = OllamaClient()
         self.bridge = CvBridge()
         self.homography = Homography()
-        self.init_homography()
 
         self.get_logger().info('Action Node has been started.')
 
@@ -74,7 +73,7 @@ class ActionServer(Node):
             raise RuntimeError(msg)
 
         try:
-            img = self._call_and_wait(self.camera_client, req, timeout=10).image
+            img = self._call_and_wait(self.camera_client, req).image
         except Exception as e:
             self.get_logger().error(f'Failed to get image from camera service: {e}')
             time.sleep(2)
@@ -270,14 +269,24 @@ def _install_shutdown_handlers(node):
 def main(args=None):
     rclpy.init(args=args)
     node = ActionServer()
+    
     executor = MultiThreadedExecutor(num_threads=4)
     executor.add_node(node)
     _install_shutdown_handlers(node)
+    
+    # 1. Create a background thread to safely run init_homography 
+    # once the executor starts spinning.
+    init_thread = threading.Thread(target=node.init_homography)
+    init_thread.start()
+    
     try:
         executor.spin()
     except KeyboardInterrupt:
         pass
     finally:
+        # Clean up the thread if it's still alive during shutdown
+        if init_thread.is_alive():
+            init_thread.join(timeout=1.0)
         node.destroy_node()
         rclpy.try_shutdown()
 
