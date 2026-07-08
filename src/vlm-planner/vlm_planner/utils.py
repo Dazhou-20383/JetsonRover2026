@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 import urllib.error
 import urllib.request
+import time
 
 
 def _json_request(url, payload=None):
@@ -38,20 +39,26 @@ class Homography:
         src_points = self.get_source_points()
         self.matrix, _ = cv2.findHomography(src_points, self.dst_points)
 
-    def get_source_points(self):
-        """Fetch annotated source points from the homography server."""
+    def get_source_points(self, required_points=4, timeout=None, poll_interval=0.5):
+        """Wait for annotated source points from the homography server."""
         if not self.image_b64:
             raise ValueError("No image set. Call set_image() first.")
 
-        payload = _json_request(f"{self.server_url}/annotations")
-        annotations = payload.get("annotations", [])
-        if len(annotations) < 4:
-            raise ValueError("Need at least four annotations from the homography server.")
+        deadline = None if timeout is None else time.monotonic() + float(timeout)
 
-        return np.array(
-            [[point["x"], point["y"]] for point in annotations[:4]],
-            dtype=np.float32,
-        )
+        while True:
+            payload = _json_request(f"{self.server_url}/annotations")
+            annotations = payload.get("annotations", [])
+            if len(annotations) >= required_points:
+                return np.array(
+                    [[point["x"], point["y"]] for point in annotations[:required_points]],
+                    dtype=np.float32,
+                )
+
+            if deadline is not None and time.monotonic() >= deadline:
+                raise TimeoutError(f"Timed out waiting for {required_points} annotations from the homography server.")
+
+            time.sleep(poll_interval)
 
     def project_point(self, x, y):
         """Project a point (x, y) using the homography matrix."""

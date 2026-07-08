@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import base64
 import json
-import mimetypes
 import threading
 from dataclasses import dataclass, field
 from http import HTTPStatus
@@ -20,9 +19,11 @@ from urllib.parse import parse_qs, urlparse
 
 @dataclass
 class ImageState:
-    image_b64: str | None = None
-    content_type: str = "image/jpeg"
-    annotations: list[dict[str, float]] = field(default_factory=list)
+  image_b64: str | None = None
+  content_type: str = "image/jpeg"
+  annotations: list[dict[str, float]] = field(default_factory=list)
+  image_version: int = 0
+  annotation_version: int = 0
 
 
 STATE = ImageState()
@@ -34,6 +35,8 @@ def _json_response(handler: BaseHTTPRequestHandler, payload: dict[str, Any], sta
     handler.send_response(status)
     handler.send_header("Content-Type", "application/json; charset=utf-8")
     handler.send_header("Content-Length", str(len(body)))
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Pragma", "no-cache")
     handler.end_headers()
     handler.wfile.write(body)
 
@@ -43,6 +46,8 @@ def _html_response(handler: BaseHTTPRequestHandler, html: str, status: HTTPStatu
     handler.send_response(status)
     handler.send_header("Content-Type", "text/html; charset=utf-8")
     handler.send_header("Content-Length", str(len(body)))
+    handler.send_header("Cache-Control", "no-store")
+    handler.send_header("Pragma", "no-cache")
     handler.end_headers()
     handler.wfile.write(body)
 
@@ -52,6 +57,7 @@ def _render_page() -> str:
         image_b64 = STATE.image_b64 or ""
         content_type = STATE.content_type
         annotations = json.dumps(STATE.annotations)
+        image_version = STATE.image_version
 
     image_src = f"data:{content_type};base64,{image_b64}" if image_b64 else ""
 
@@ -202,6 +208,15 @@ def _render_page() -> str:
     const coordsEl = document.getElementById('coords');
     const stateEl = document.getElementById('state');
     const annotations = {annotations};
+    let imageVersion = {image_version};
+
+    function setImageSource(contentType, imageB64) {{
+      if (!imageB64) {{
+        image.removeAttribute('src');
+        return;
+      }}
+      image.src = `data:${{contentType}};base64,${{imageB64}}`;
+    }}
 
     function resizeCanvas() {{
       const rect = image.getBoundingClientRect();
@@ -280,11 +295,42 @@ def _render_page() -> str:
         body: JSON.stringify({{ annotations }})
       }});
       const payload = await response.json();
+      if (Array.isArray(payload.annotations)) {{
+        annotations.length = 0;
+        annotations.push(...payload.annotations);
+        draw();
+      }}
       stateEl.textContent = JSON.stringify(payload, null, 2);
     }});
 
+    async function refreshImage() {{
+      try {{
+        const response = await fetch('/image', {{ cache: 'no-store' }});
+        if (!response.ok) {{
+          return;
+        }}
+        const payload = await response.json();
+        if (typeof payload.version !== 'number' || payload.version === imageVersion) {{
+          return;
+        }}
+
+        imageVersion = payload.version;
+        annotations.length = 0;
+        if (Array.isArray(payload.annotations)) {{
+          annotations.push(...payload.annotations);
+        }}
+        setImageSource(payload.content_type, payload.image);
+        draw();
+      }} catch (error) {{
+        console.error('Failed to refresh image:', error);
+      }}
+    }}
+
     window.addEventListener('resize', resizeCanvas);
     image.addEventListener('load', resizeCanvas);
+
+    setInterval(refreshImage, 1000);
+    refreshImage();
 
     if (image.complete && image.naturalWidth > 0) {{
       resizeCanvas();
@@ -312,6 +358,7 @@ class HomographyRequestHandler(BaseHTTPRequestHandler):
                     _json_response(self, {"error": "No image uploaded yet."}, HTTPStatus.NOT_FOUND)
                     return
                 payload = {
+                  "version": STATE.image_version,
                     "content_type": STATE.content_type,
                     "image": STATE.image_b64,
                     "annotations": STATE.annotations,
@@ -372,11 +419,14 @@ class HomographyRequestHandler(BaseHTTPRequestHandler):
             STATE.image_b64 = image_b64
             STATE.content_type = image_content_type or "image/jpeg"
             STATE.annotations = []
+            STATE.image_version += 1
+            STATE.annotation_version += 1
 
         _json_response(
             self,
             {
                 "success": True,
+            "version": STATE.image_version,
                 "message": "Image stored. Open GET / in a browser to annotate it.",
             },
         )
@@ -414,8 +464,9 @@ class HomographyRequestHandler(BaseHTTPRequestHandler):
 
         with STATE_LOCK:
             STATE.annotations = normalized
+            STATE.annotation_version += 1
 
-        _json_response(self, {"success": True, "annotations": normalized})
+        _json_response(self, {"success": True, "annotations": normalized, "version": STATE.annotation_version})
 
     def log_message(self, format: str, *args: Any) -> None:
         return
