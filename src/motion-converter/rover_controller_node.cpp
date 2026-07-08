@@ -113,7 +113,9 @@ private:
     mbra_enabled_ = request->enable;
     response->success = true;
     response->error.clear();
-    mbra_enable_pub_->publish(std_msgs::msg::Bool{mbra_enabled_});
+    std_msgs::msg::Bool enable_msg;
+    enable_msg.data = mbra_enabled_;
+    mbra_enable_pub_->publish(enable_msg);
     RCLCPP_INFO(get_logger(), "MBRA enabled: %s", mbra_enabled_ ? "true" : "false");
   }
 
