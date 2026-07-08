@@ -86,9 +86,11 @@ class ActionServer(Node):
         img_base64 = base64.b64encode(encoded_image.tobytes()).decode('utf-8')
 
         self.homography.set_image(img_base64)
+        self.get_logger().info('Waiting for homography annotations...')
         self.homography.get_source_points()
         self.homography.set_matrix()
         self.get_logger().info('Homography matrix initialized.')
+        self.get_logger().info(f'Homography matrix: {self.homography.matrix}')
 
     def action_handler(self, request, response):
         self.get_logger().info(f'Received action: {request.tool_name} with payload: {request.args_json}')
