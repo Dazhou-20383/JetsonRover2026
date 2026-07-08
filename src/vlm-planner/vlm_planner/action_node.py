@@ -194,6 +194,7 @@ class ActionServer(Node):
             
         # 3. Convert the JPEG byte buffer to a base64 string
         base64_image = base64.b64encode(encoded_image.tobytes()).decode('utf-8')
+        self.homography.set_image(base64_image)
         
         try:
             x_img, y_img = self.vlm.point_image(base64_image, loc_description)
