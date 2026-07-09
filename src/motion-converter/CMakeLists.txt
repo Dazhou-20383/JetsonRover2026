@@ -17,16 +17,8 @@ ament_target_dependencies(motion_converter_node
   std_msgs
 )
 
-add_executable(rover_controller_node rover_controller_node.cpp)
-ament_target_dependencies(rover_controller_node
-  rclcpp
-  geometry_msgs
-  std_msgs
-)
-
 install(TARGETS
   motion_converter_node
-  rover_controller_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
