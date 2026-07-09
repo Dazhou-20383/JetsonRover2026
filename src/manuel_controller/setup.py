@@ -10,11 +10,11 @@ setup(
 		('share/ament_index/resource_index/packages', ['resource/' + package_name]),
 		('share/' + package_name, ['package.xml']),
 	],
-	install_requires=['setuptools'],
+	install_requires=['setuptools', 'websockets'],
 	zip_safe=True,
 	maintainer='zhangboya',
 	maintainer_email='zhangboya@example.com',
-	description='ROS2 manual controller that publishes cmd_vel from UDP joystick input.',
+	description='ROS2 manual controller that publishes cmd_vel from WebSocket joystick input.',
 	license='Apache-2.0',
 	tests_require=['pytest'],
 	entry_points={

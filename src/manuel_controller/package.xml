@@ -3,7 +3,7 @@
 <package format="3">
 	<name>manuel_controller</name>
 	<version>0.0.1</version>
-	<description>ROS2 manual controller that publishes cmd_vel from UDP joystick input.</description>
+	<description>ROS2 manual controller that publishes cmd_vel from WebSocket joystick input.</description>
 
 	<maintainer email="zhangboya@example.com">zhangboya</maintainer>
 	<license>Apache-2.0</license>
@@ -12,6 +12,7 @@
 
 	<exec_depend>rclpy</exec_depend>
 	<exec_depend>geometry_msgs</exec_depend>
+	<exec_depend>python3-websockets</exec_depend>
 
 	<test_depend>ament_lint_auto</test_depend>
 	<test_depend>ament_lint_common</test_depend>
