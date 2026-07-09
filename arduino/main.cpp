@@ -16,7 +16,7 @@ constexpr int kMotorPwmMax = 255;
 // Setup procedure: ensure servo is facing front
 // run init servo
 // mount the wheels facing straight
-constexpr int kServoInitUs = 1500;
+// constexpr int kServoInitUs = 1500;
 constexpr int kServoMinUs = 1000;
 constexpr int kServoMaxUs = 2000;
 
@@ -25,17 +25,18 @@ struct WheelChannel {
 	int8_t motorDirectionPin;
 	uint8_t steeringServoPin;
 	bool enabled;
+	int ServoInitUs;
 	Servo servo;
 };
 
 // Edit these pins to match your Arduino wiring.
 WheelChannel kWheels[kWheelCount] = {
-		{3, -1, 22, true},   // front-left
-		{5, -1, 23, true},   // front-right
+		{20, -1, 10, true, 1700},   // front-left
+		{21, -1, 11, true, 1800},   // front-right
 		{6, -1, 24, false},  // middle-left: ignored
 		{9, -1, 25, false},  // middle-right: ignored
-		{10, -1, 26, true},  // rear-left
-		{11, -1, 27, true},  // rear-right
+		{22, -1, 12, true, 1500},  // rear-left
+		{23, -1, 13, true, 1500},  // rear-right
 };
 
 char gLineBuffer[kLineBufferSize];
@@ -87,14 +88,14 @@ int speedToPwm(float speedCommand) {
 	return clampInt(pwm, kMotorPwmMin, kMotorPwmMax);
 }
 
-int angleToServoUs(float angleCommand) {
-	const float normalized = clampFloat(angleCommand, -45.0f, 45.0f) / 45;
+int angleToServoUs(float angleCommand, int ServoInitUs = 1500) {
+	const float normalized = clampFloat(angleCommand, -45.0f, 45.0f) / 90;
 
-	int pulseWidthUs = kServoInitUs;
+	int pulseWidthUs = ServoInitUs;
 	if (normalized >= 0.0f) {
-		pulseWidthUs += static_cast<int>(lroundf(normalized * (kServoMaxUs - kServoInitUs)));
+		pulseWidthUs += static_cast<int>(lroundf(ServoInitUs + normalized * 500));
 	} else {
-		pulseWidthUs += static_cast<int>(lroundf(normalized * (kServoInitUs - kServoMinUs)));
+		pulseWidthUs += static_cast<int>(lroundf(ServoInitUs - normalized * 500));
 	}
 
 	return clampInt(pulseWidthUs, kServoMinUs, kServoMaxUs);
@@ -111,7 +112,7 @@ void applyWheelCommand(size_t wheelIndex, float speedCommand, float angleCommand
 	}
   int speed_pwm = speedToPwm(speedCommand);
 	analogWrite(wheel.motorPwmPin, speed_pwm);
-  int servo_pwm = angleToServoUs(angleCommand);
+  int servo_pwm = angleToServoUs(angleCommand, wheel.ServoInitUs);
 	wheel.servo.writeMicroseconds(servo_pwm);
 //   Serial.print("PWM: ");
 //   Serial.print(speed_pwm);
@@ -154,7 +155,7 @@ void setupPins() {
 		}
 
 		wheel.servo.attach(wheel.steeringServoPin, kServoMinUs, kServoMaxUs);
-		wheel.servo.writeMicroseconds(kServoInitUs);
+		wheel.servo.writeMicroseconds(wheel.ServoInitUs);
 	}
 }
 
