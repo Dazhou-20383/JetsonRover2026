@@ -24,8 +24,6 @@ class ManuelController(Node):
         self.client_connected = False
         self.last_command_time = time.time()
 
-        self.loop = asyncio.new_event_loop()
-
         self.ws_thread = threading.Thread(
             target=self.run_websocket_server,
             daemon=True
@@ -38,22 +36,21 @@ class ManuelController(Node):
             self.check_timeout
         )
 
-        self.get_logger().info(
-            "WebSocket joystick server started on port 8080"
-        )
-
     def run_websocket_server(self):
-        asyncio.set_event_loop(self.loop)
+        asyncio.run(self._serve_websocket())
 
-        server = self.loop.run_until_complete(
-            websockets.serve(
-                self.websocket_handler,
-                "0.0.0.0",
-                8080
+
+    async def _serve_websocket(self):
+        async with websockets.serve(
+            self.websocket_handler,
+            "0.0.0.0",
+            8080
+        ):
+            self.get_logger().info(
+                "WebSocket joystick server started on port 8080"
             )
-        )
 
-        self.loop.run_until_complete(server.wait_closed())
+            await asyncio.Future()
 
 
     async def websocket_handler(self, websocket):
