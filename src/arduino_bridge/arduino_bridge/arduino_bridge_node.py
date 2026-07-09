@@ -53,7 +53,7 @@ class ArduinoBridgeNode(Node):
 				timeout=self._serial_timeout,
 			)
 			self.get_logger().info(f'Connected to Arduino on {self._serial_port}')
-		except serial.SerialException as exc:
+		except Exception as exc:
 			self._serial = None
 			self.get_logger().error(
 				f'Failed to open serial port {self._serial_port}: {exc}'
@@ -69,7 +69,7 @@ class ArduinoBridgeNode(Node):
 		try:
 			self._serial.write(payload.encode('utf-8'))
 			self._serial.flush()
-		except serial.SerialException as exc:
+		except Exception as exc:
 			self.get_logger().error(f'Serial write failed: {exc}')
 
 	def destroy_node(self) -> bool:
