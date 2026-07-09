@@ -1,14 +1,11 @@
 #!/usr/bin/env python3
 
+import threading
+
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-
-try:
-	import serial
-except ImportError:
-	serial = None
-
+import serial
 
 class ArduinoBridgeNode(Node):
 	def __init__(self) -> None:
@@ -26,6 +23,13 @@ class ArduinoBridgeNode(Node):
 
 		self._serial = None
 		self._connect_serial()
+
+		self._read_thread_stop = threading.Event()
+		self._read_thread = threading.Thread(
+			target=self._read_serial_loop,
+			daemon=True,
+		)
+		self._read_thread.start()
 
 		self._subscription = self.create_subscription(
 			Float32MultiArray,
@@ -59,6 +63,40 @@ class ArduinoBridgeNode(Node):
 				f'Failed to open serial port {self._serial_port}: {exc}'
 			)
 
+	def _read_serial_loop(self) -> None:
+		"""Continuously read lines from the Arduino and log them.
+
+		This gives visibility into the Arduino's echo-back (OK: ...) and
+		error (ERR: ...) messages, so serial issues show up in the ROS
+		log instead of being silently dropped.
+		"""
+		while not self._read_thread_stop.is_set():
+			if self._serial is None or not self._serial.is_open:
+				# Not connected yet (or connection failed) -- avoid a busy
+				# loop while we wait for _connect_serial to succeed.
+				self._read_thread_stop.wait(timeout=1.0)
+				continue
+
+			try:
+				line = self._serial.readline()
+			except Exception as exc:
+				self.get_logger().error(f'Serial read failed: {exc}')
+				self._read_thread_stop.wait(timeout=1.0)
+				continue
+
+			if not line:
+				# readline() timed out with no data; loop again.
+				continue
+
+			decoded = line.decode('utf-8', errors='replace').rstrip('\r\n')
+			if not decoded:
+				continue
+
+			if decoded.startswith('ERR'):
+				self.get_logger().warn(f'Arduino: {decoded}')
+			else:
+				self.get_logger().info(f'Arduino: {decoded}')
+
 	def _motor_commands_callback(self, msg: Float32MultiArray) -> None:
 		if self._serial is None:
 			return
@@ -73,6 +111,9 @@ class ArduinoBridgeNode(Node):
 			self.get_logger().error(f'Serial write failed: {exc}')
 
 	def destroy_node(self) -> bool:
+		self._read_thread_stop.set()
+		if self._read_thread.is_alive():
+			self._read_thread.join(timeout=2.0)
 		if self._serial is not None and self._serial.is_open:
 			self._serial.close()
 		return super().destroy_node()
