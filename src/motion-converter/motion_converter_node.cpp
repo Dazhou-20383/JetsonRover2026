@@ -54,7 +54,7 @@ private:
                 wheel_speed = -wheel_speed;
             }
 
-            w.velocity = wheel_speed;
+            w.velocity = wheel_speed / max_wheel_speed_; // Normalize the wheel speed to the range [-1, 1]
             w.steering_angle = steering_angle_deg;
 
             motor_commands.data.push_back(static_cast<float>(w.velocity));
@@ -67,6 +67,7 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr subscriber_;
     rclcpp::Publisher<std_msgs::msg::Float32MultiArray>::SharedPtr publisher_;
     std::vector<Wheel> wheels_;
+    double max_wheel_speed_ = 0.3;  // Maximum wheel speed in m/s
 };
 
 int main(int argc, char *argv[]) {

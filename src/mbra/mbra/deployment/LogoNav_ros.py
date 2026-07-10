@@ -129,7 +129,7 @@ class MBRANode(Node):
         self.latest_image = None
 
         #goal pose on the global coordinate (you can give list to have subgoals.)
-        self.xy_subgoal = [[8.0, -10.0]]
+        self.xy_subgoal = [[0.0, 0.0]]
         self.yaw_subgoal = [0]  
 
         self.x_position = 0.0

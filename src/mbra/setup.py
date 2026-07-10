@@ -12,6 +12,7 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'config'), glob('mbra/train/config/*.yaml')),
         (os.path.join('share', package_name, 'model_weights'), glob('model_weights/*')),
     ],
@@ -29,6 +30,7 @@ setup(
     entry_points={
         'console_scripts': [
             'logonav_node = mbra.deployment.LogoNav_ros:main',
+            'cmd_vel_relay_node = mbra.cmd_vel_relay_node:main',
             'test_goal_node = mbra.test.manual_goal_test:main'
         ],
     },
