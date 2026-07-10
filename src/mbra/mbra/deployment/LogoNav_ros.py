@@ -166,6 +166,7 @@ class MBRANode(Node):
         if self.mbra_enable:
             self.get_logger().info("MBRA enabled.")
         else:
+            self.publisher_.publish(Twist())  # Stop the robot when MBRA is disabled
             self.get_logger().info("MBRA disabled.")
 
     def callback_logonav(self, msg_1):
