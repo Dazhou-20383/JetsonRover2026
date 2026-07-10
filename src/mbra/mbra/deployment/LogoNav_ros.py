@@ -276,7 +276,7 @@ class MBRANode(Node):
             msg_raw.angular.z = wt
 
             maxv = 0.3
-            maxw = 0.8       
+            maxw = 1       
 
             if np.absolute(vt) <= maxv:
                 if np.absolute(wt) <= maxw:
