@@ -12,7 +12,7 @@ class IPhonePoseNode(Node):
     def __init__(self):
         super().__init__('iphone_pose_node')
 
-        self.publisher = self.create_publisher(Pose2D, '/robot_pose', 10)
+        self.publisher = self.create_publisher(Pose2D, '/robot/pose', 10)
 
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(('0.0.0.0', 5005))  # same port as Swift app
