@@ -11,7 +11,7 @@ class ArduinoBridgeNode(Node):
 	def __init__(self) -> None:
 		super().__init__('arduino_bridge_node')
 
-		self.declare_parameter('serial_port', '/dev/ttyAMA0')
+		self.declare_parameter('serial_port', '/dev/ttyACM0')
 		self.declare_parameter('baudrate', 115200)
 		self.declare_parameter('serial_timeout_sec', 0.1)
 		self.declare_parameter('topic_name', '/motion/motor_commands')

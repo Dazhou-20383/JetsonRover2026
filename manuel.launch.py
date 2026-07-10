@@ -11,7 +11,7 @@ def generate_launch_description():
     topic_name = LaunchConfiguration('topic_name')
 
     return LaunchDescription([
-        DeclareLaunchArgument('serial_port', default_value='/dev/ttyAMA0'),
+        DeclareLaunchArgument('serial_port', default_value='/dev/ttyACM0'),
         DeclareLaunchArgument('baudrate', default_value='115200'),
         DeclareLaunchArgument('serial_timeout_sec', default_value='0.1'),
         DeclareLaunchArgument('topic_name', default_value='/motion/motor_commands'),
