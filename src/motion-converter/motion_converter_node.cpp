@@ -42,7 +42,7 @@ private:
             const double vy = msg->linear.y + w.x * msg->angular.z;
 
             w.velocity = std::sqrt(vx * vx + vy * vy);
-            w.steering_angle = std::atan2(vy, vx);
+            w.steering_angle = std::atan2(vy, vx) * 180.0 / 3.14159;
 
             motor_commands.data.push_back(static_cast<float>(w.velocity));
             motor_commands.data.push_back(static_cast<float>(w.steering_angle));
