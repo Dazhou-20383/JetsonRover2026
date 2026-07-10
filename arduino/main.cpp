@@ -15,8 +15,8 @@ constexpr int kMotorPwmMax = 255;
 
 constexpr int8_t motorDirectionPinRight1 = 4;
 constexpr int8_t motorDirectionPinRight2 = 2;
-constexpr int8_t motorDirectionPinLeft1 = 8;
-constexpr int8_t motorDirectionPinLeft2 = 7;
+constexpr int8_t motorDirectionPinLeft1 = 7;
+constexpr int8_t motorDirectionPinLeft2 = 8;
  
 // Allows for only 90deg rotation, initial position is in the middle
 // Setup procedure: ensure servo is facing front
@@ -38,12 +38,12 @@ struct WheelChannel {
  
 // Edit these pins to match your Arduino wiring.
 WheelChannel kWheels[kWheelCount] = {
-		{9, false, false, 10, true, 1500},   // front-left
-		{5, true, false, 11, true, 1500},   // front-right
-		{-1, false, false, 24, false},  // middle-left: ignored
-		{-1, true, false, 25, false},  // middle-right: ignored
-		{6, false, false, 12, true, 1700},  // rear-left
-		{3, true, false, 13, true, 1700},  // rear-right
+		{11, false, true, 13, true, 1550},   // front-left
+		{5, true, true, 12, true, 1600},   // front-right
+		{-1, false, false, 0, false},  // middle-left: ignored
+		{-1, true, false, 0, false},  // middle-right: ignored
+		{6, false, true, 10, true, 1500},  // rear-left
+		{3, true, true, 9, true, 1550},  // rear-right
 };
  
 char gLineBuffer[kLineBufferSize];
@@ -238,21 +238,21 @@ void setup() {
 	Serial.begin(115200);
 	setupPins();
 	Serial.println(F("Arduino bridge ready"));
-	delay(3000);
-}
-
-void loop() {
-	readSerial();
+	delay(5000);
 }
 
 // void loop() {
-// 	const float P1[12] = {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 30.00, 0.00, 0.00};
-// 	test(P1);
-// 	const float P2[12] = {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 30.00, 0.00, 0.00, 0.00, 30.00};
-// 	test(P2);
-// 	const float P3[12] = {0.0, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, -30.00, 0.00, 0.00};
-// 	test(P3);
-// 	const float P4[12] = {0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, -30.00, 0.00, 0.00, 0.00, -30.00};
-// 	test(P4);
-//   Serial.println("================================");
+// 	readSerial();
 // }
+
+void loop() {
+	const float P1[12] = {0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 00.00, 0.00, 0.00};
+	test(P1);
+	const float P2[12] = {0.00, 0.00, -0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, -0.30, 00.00};
+	test(P2);
+	const float P3[12] = {-0.30, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.00, -0.30, 0.00, 0.00, 0.00};
+	test(P3);
+	const float P4[12] = {0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.30, 00.00};
+	test(P4);
+  Serial.println("================================");
+}
