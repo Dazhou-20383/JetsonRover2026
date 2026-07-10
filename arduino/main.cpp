@@ -12,6 +12,11 @@ constexpr size_t kLineBufferSize = 160;
  
 constexpr int kMotorPwmMin = 0;
 constexpr int kMotorPwmMax = 255;
+
+constexpr int8_t motorDirectionPinRight1 = 4;
+constexpr int8_t motorDirectionPinRight2 = 2;
+constexpr int8_t motorDirectionPinLeft1 = 8;
+constexpr int8_t motorDirectionPinLeft2 = 7;
  
 // Allows for only 90deg rotation, initial position is in the middle
 // Setup procedure: ensure servo is facing front
@@ -23,7 +28,8 @@ constexpr int kServoMaxUs = 2000;
  
 struct WheelChannel {
 	uint8_t motorPwmPin;
-	int8_t motorDirectionPin;
+	bool isRight;
+	bool reversed;
 	uint8_t steeringServoPin;
 	bool enabled;
 	int ServoInitUs;
@@ -32,12 +38,12 @@ struct WheelChannel {
  
 // Edit these pins to match your Arduino wiring.
 WheelChannel kWheels[kWheelCount] = {
-		{20, -1, 10, true, 1500},   // front-left
-		{21, -1, 11, true, 1500},   // front-right
-		{6, -1, 24, false},  // middle-left: ignored
-		{9, -1, 25, false},  // middle-right: ignored
-		{22, -1, 12, true, 1700},  // rear-left
-		{23, -1, 13, true, 1700},  // rear-right
+		{9, false, false, 10, true, 1500},   // front-left
+		{5, true, false, 11, true, 1500},   // front-right
+		{-1, false, false, 24, false},  // middle-left: ignored
+		{-1, true, false, 25, false},  // middle-right: ignored
+		{6, false, false, 12, true, 1700},  // rear-left
+		{3, true, false, 13, true, 1700},  // rear-right
 };
  
 char gLineBuffer[kLineBufferSize];
@@ -97,16 +103,31 @@ int angleToServoUs(float angleCommand, int ServoInitUs = 1500) {
  
 	return clampInt(pulseWidthUs, kServoMinUs, kServoMaxUs);
 }
+
+void setMotorDirection(WheelChannel &wheel, int mode){
+
+	int8_t motorDirectionPin1 = wheel.isRight ? motorDirectionPinRight1 : motorDirectionPinLeft1;
+	int8_t motorDirectionPin2 = wheel.isRight ? motorDirectionPinRight2 : motorDirectionPinLeft2;
+	int _mode = mode * (wheel.reversed ? -1 : 1);
+
+	if (_mode == 1){
+			digitalWrite(motorDirectionPin1, HIGH);
+			digitalWrite(motorDirectionPin2, LOW);
+	} else if (_mode == -1){
+			digitalWrite(motorDirectionPin1, LOW);
+			digitalWrite(motorDirectionPin2, HIGH);
+	}
+}
  
 void applyWheelCommand(size_t wheelIndex, float speedCommand, float angleCommand) {
 	WheelChannel &wheel = kWheels[wheelIndex];
 	if (!wheel.enabled) {
 		return;
 	}
- 
-	if (wheel.motorDirectionPin >= 0) {
-		digitalWrite(wheel.motorDirectionPin, speedCommand < 0.0f ? LOW : HIGH);
-	}
+
+	int forward = (speedCommand >= 0) ? 1 : -1;
+	setMotorDirection(wheel, forward);
+
   int speed_pwm = speedToPwm(speedCommand);
 	analogWrite(wheel.motorPwmPin, speed_pwm);
   int servo_pwm = angleToServoUs(angleCommand, wheel.ServoInitUs);
@@ -167,11 +188,15 @@ void setupPins() {
  
 		pinMode(wheel.motorPwmPin, OUTPUT);
 		analogWrite(wheel.motorPwmPin, kMotorPwmMin);
- 
-		if (wheel.motorDirectionPin >= 0) {
-			pinMode(wheel.motorDirectionPin, OUTPUT);
-			digitalWrite(wheel.motorDirectionPin, HIGH);
-		}
+
+		pinMode(motorDirectionPinRight1, OUTPUT);
+		digitalWrite(motorDirectionPinRight1, LOW);
+		pinMode(motorDirectionPinRight2, OUTPUT);
+		digitalWrite(motorDirectionPinRight2, LOW);
+		pinMode(motorDirectionPinLeft1, OUTPUT);
+		digitalWrite(motorDirectionPinLeft1, LOW);
+		pinMode(motorDirectionPinLeft2, OUTPUT);
+		digitalWrite(motorDirectionPinLeft2, LOW);
  
 		wheel.servo.attach(wheel.steeringServoPin, kServoMinUs, kServoMaxUs);
 		wheel.servo.writeMicroseconds(wheel.ServoInitUs);
