@@ -2,7 +2,6 @@
 
 import rclpy
 from geometry_msgs.msg import Twist
-from std_msgs.msg import Bool
 from rclpy.node import Node
 
 
@@ -10,8 +9,7 @@ class CmdVelRelayNode(Node):
     def __init__(self) -> None:
         super().__init__('cmd_vel_relay_node')
 
-        self._publisher = self.create_publisher(Bool, '/motion/cmd_vel', 10)
-        self._enable_mbra_pub = self.create_publisher(Twist, '/mbra/enable', 10)
+        self._publisher = self.create_publisher(Twist, '/motion/cmd_vel', 10)
         self._subscription = self.create_subscription(
             Twist,
             '/mbra/cmd_vel',
