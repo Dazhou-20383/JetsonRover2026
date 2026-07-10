@@ -37,6 +37,8 @@ class ArduinoBridgeNode(Node):
 			self._motor_commands_callback,
 			10,
 		)
+		self.motor_cmd = [0.0] * 12  # Initialize with 12 zeros
+		self.timer = self.create_timer(0.1, self.send_motor_commands_serial)
 
 		self.get_logger().info(
 			f'Listening on {self._topic_name} and forwarding to '
@@ -98,12 +100,21 @@ class ArduinoBridgeNode(Node):
 				self.get_logger().info(f'Arduino: {decoded}')
 
 	def _motor_commands_callback(self, msg: Float32MultiArray) -> None:
+		if len(msg.data) != 12:
+			self.get_logger().error(
+				f'Expected 12 motor commands, got {len(msg.data)}'
+			)
+			return
+
+		self.motor_cmd = msg.data
+
+	def send_motor_commands_serial(self) -> None:
 		if self._serial is None:
 			self.get_logger().debug('Serial port not connected; dropping motor command')
 			return
 
 		# Send CSV + newline so Arduino can parse one command per line.
-		payload = ','.join(f'{value:.6f}' for value in msg.data) + '\n'
+		payload = ','.join(f'{value:.6f}' for value in self.motor_cmd) + '\n'
 		self.get_logger().debug(f'Sending to Arduino: {payload.strip()}')
 		try:
 			self._serial.write(payload.encode('utf-8'))

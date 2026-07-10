@@ -32,12 +32,12 @@ struct WheelChannel {
  
 // Edit these pins to match your Arduino wiring.
 WheelChannel kWheels[kWheelCount] = {
-		{20, -1, 10, true, 1700},   // front-left
-		{21, -1, 11, true, 1800},   // front-right
+		{20, -1, 10, true, 1500},   // front-left
+		{21, -1, 11, true, 1500},   // front-right
 		{6, -1, 24, false},  // middle-left: ignored
 		{9, -1, 25, false},  // middle-right: ignored
-		{22, -1, 12, true, 1500},  // rear-left
-		{23, -1, 13, true, 1500},  // rear-right
+		{22, -1, 12, true, 1700},  // rear-left
+		{23, -1, 13, true, 1700},  // rear-right
 };
  
 char gLineBuffer[kLineBufferSize];
