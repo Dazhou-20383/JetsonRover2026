@@ -23,12 +23,12 @@ public:
         publisher_ = create_publisher<std_msgs::msg::Float32MultiArray>("/motion/motor_commands", 10);
 
         wheels_ = {
-                {0.5, 0.5, 0.0, 0.0},    // Front Left
-                {0.5, -0.5, 0.0, 0.0},   // Front Right
-                {0.0, 0.5, 0.0, 0.0},    // Middle Left
-                {0.0, -0.5, 0.0, 0.0},   // Middle Right
-                {-0.5, 0.5, 0.0, 0.0},   // Rear Left
-                {-0.5, -0.5, 0.0, 0.0},  // Rear Right
+                {0.4, -0.3, 0.0, 0.0},    // Front Left
+                {0.4, 0.3, 0.0, 0.0},   // Front Right
+                {0.0, -0.3, 0.0, 0.0},    // Middle Left
+                {0.0, 0.3, 0.0, 0.0},   // Middle Right
+                {-0.15, -0.3, 0.0, 0.0},   // Rear Left
+                {-0.15, 0.3, 0.0, 0.0},  // Rear Right
         };
     }
 
@@ -37,12 +37,25 @@ private:
         std_msgs::msg::Float32MultiArray motor_commands;
         motor_commands.data.reserve(wheels_.size() * 2);
 
+        constexpr double kPi = 3.14159265358979323846;
+
         for (auto &w : wheels_) {
             const double vx = msg->linear.x - w.y * msg->angular.z;
             const double vy = msg->linear.y + w.x * msg->angular.z;
 
-            w.velocity = std::sqrt(vx * vx + vy * vy);
-            w.steering_angle = std::atan2(vy, vx);
+            double steering_angle_deg = std::atan2(vy, vx) * 180.0 / kPi;
+            double wheel_speed = std::hypot(vx, vy);
+
+            if (steering_angle_deg > 90.0) {
+                steering_angle_deg -= 180.0;
+                wheel_speed = -wheel_speed;
+            } else if (steering_angle_deg < -90.0) {
+                steering_angle_deg += 180.0;
+                wheel_speed = -wheel_speed;
+            }
+
+            w.velocity = wheel_speed;
+            w.steering_angle = steering_angle_deg;
 
             motor_commands.data.push_back(static_cast<float>(w.velocity));
             motor_commands.data.push_back(static_cast<float>(w.steering_angle));

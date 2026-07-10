@@ -28,7 +28,6 @@ ament_target_dependencies(rover_controller_node
 
 install(TARGETS
   motion_converter_node
-  rover_controller_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

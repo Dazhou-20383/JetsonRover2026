@@ -1,16 +1,11 @@
 #!/usr/bin/env python3
 
-import signal
+import threading
 
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Float32MultiArray
-
-try:
-	import serial
-except ImportError:
-	serial = None
-
+import serial
 
 class ArduinoBridgeNode(Node):
 	def __init__(self) -> None:
@@ -29,12 +24,21 @@ class ArduinoBridgeNode(Node):
 		self._serial = None
 		self._connect_serial()
 
+		self._read_thread_stop = threading.Event()
+		self._read_thread = threading.Thread(
+			target=self._read_serial_loop,
+			daemon=True,
+		)
+		self._read_thread.start()
+
 		self._subscription = self.create_subscription(
 			Float32MultiArray,
 			self._topic_name,
 			self._motor_commands_callback,
 			10,
 		)
+		self.motor_cmd = [0.0] * 12  # Initialize with 12 zeros
+		self.timer = self.create_timer(0.1, self.send_motor_commands_serial)
 
 		self.get_logger().info(
 			f'Listening on {self._topic_name} and forwarding to '
@@ -55,46 +59,81 @@ class ArduinoBridgeNode(Node):
 				timeout=self._serial_timeout,
 			)
 			self.get_logger().info(f'Connected to Arduino on {self._serial_port}')
-		except serial.SerialException as exc:
+		except Exception as exc:
 			self._serial = None
 			self.get_logger().error(
 				f'Failed to open serial port {self._serial_port}: {exc}'
 			)
 
+	def _read_serial_loop(self) -> None:
+		"""Continuously read lines from the Arduino and log them.
+
+		This gives visibility into the Arduino's echo-back (OK: ...) and
+		error (ERR: ...) messages, so serial issues show up in the ROS
+		log instead of being silently dropped.
+		"""
+		while not self._read_thread_stop.is_set():
+			if self._serial is None or not self._serial.is_open:
+				# Not connected yet (or connection failed) -- avoid a busy
+				# loop while we wait for _connect_serial to succeed.
+				self._read_thread_stop.wait(timeout=1.0)
+				continue
+
+			try:
+				line = self._serial.readline()
+			except Exception as exc:
+				self.get_logger().error(f'Serial read failed: {exc}')
+				self._read_thread_stop.wait(timeout=1.0)
+				continue
+
+			if not line:
+				# readline() timed out with no data; loop again.
+				continue
+
+			decoded = line.decode('utf-8', errors='replace').rstrip('\r\n')
+			if not decoded:
+				continue
+
+			if decoded.startswith('ERR'):
+				self.get_logger().warn(f'Arduino: {decoded}')
+			else:
+				self.get_logger().info(f'Arduino: {decoded}')
+
 	def _motor_commands_callback(self, msg: Float32MultiArray) -> None:
+		if len(msg.data) != 12:
+			self.get_logger().error(
+				f'Expected 12 motor commands, got {len(msg.data)}'
+			)
+			return
+
+		self.motor_cmd = msg.data
+
+	def send_motor_commands_serial(self) -> None:
 		if self._serial is None:
+			self.get_logger().debug('Serial port not connected; dropping motor command')
 			return
 
 		# Send CSV + newline so Arduino can parse one command per line.
-		payload = ','.join(f'{value:.6f}' for value in msg.data) + '\n'
-
+		payload = ','.join(f'{value:.6f}' for value in self.motor_cmd) + '\n'
+		self.get_logger().debug(f'Sending to Arduino: {payload.strip()}')
 		try:
 			self._serial.write(payload.encode('utf-8'))
 			self._serial.flush()
-		except serial.SerialException as exc:
+		except Exception as exc:
 			self.get_logger().error(f'Serial write failed: {exc}')
 
 	def destroy_node(self) -> bool:
+		self._read_thread_stop.set()
+		if self._read_thread.is_alive():
+			self._read_thread.join(timeout=2.0)
 		if self._serial is not None and self._serial.is_open:
 			self._serial.close()
 		return super().destroy_node()
 
 
-def _install_shutdown_handlers(node):
-	def _handle_shutdown(signum, frame):
-		if rclpy.ok():
-			node.get_logger().info(f'Received signal {signum}, shutting down.')
-			rclpy.try_shutdown()
-
-	signal.signal(signal.SIGINT, _handle_shutdown)
-	if hasattr(signal, 'SIGTERM'):
-		signal.signal(signal.SIGTERM, _handle_shutdown)
-
-
 def main(args=None) -> None:
 	rclpy.init(args=args)
 	node = ArduinoBridgeNode()
-	_install_shutdown_handlers(node)
 
 	try:
 		rclpy.spin(node)
@@ -102,7 +141,7 @@ def main(args=None) -> None:
 		pass
 	finally:
 		node.destroy_node()
-		rclpy.try_shutdown()
+		rclpy.shutdown()
 
 
 if __name__ == '__main__':
