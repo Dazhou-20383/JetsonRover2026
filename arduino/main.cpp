@@ -97,9 +97,9 @@ int speedToPwm(float speedCommand) {
  
 int angleToServoUs(float angleCommand, int ServoInitUs = 1500) {
 	// normalized is in [-0.5, 0.5] for angleCommand in [-45, 45] degrees.
-	const float normalized = clampFloat(angleCommand, -45.0f, 45.0f) / 90.0f;
+	const float normalized = clampFloat(angleCommand, -45.0f, 45.0f) / 45.0f;
  
-	const int pulseWidthUs = ServoInitUs + static_cast<int>(lroundf(normalized * 500.0f));
+	const int pulseWidthUs = ServoInitUs + static_cast<int>(lroundf(normalized * 400.0f));
  
 	return clampInt(pulseWidthUs, kServoMinUs, kServoMaxUs);
 }
@@ -241,18 +241,18 @@ void setup() {
 	delay(5000);
 }
 
-// void loop() {
-// 	readSerial();
-// }
-
 void loop() {
-	const float P1[12] = {0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 00.00, 0.00, 0.00};
-	test(P1);
-	const float P2[12] = {0.00, 0.00, -0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, -0.30, 00.00};
-	test(P2);
-	const float P3[12] = {-0.30, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.00, -0.30, 0.00, 0.00, 0.00};
-	test(P3);
-	const float P4[12] = {0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.30, 00.00};
-	test(P4);
-  Serial.println("================================");
+	readSerial();
 }
+
+// void loop() {
+// 	const float P1[12] = {0.30, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.00, 0.30, 00.00, 0.00, 0.00};
+// 	test(P1);
+// 	const float P2[12] = {0.00, 0.00, -0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, -0.30, 00.00};
+// 	test(P2);
+// 	const float P3[12] = {-0.30, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.00, -0.30, 0.00, 0.00, 0.00};
+// 	test(P3);
+// 	const float P4[12] = {0.00, 0.00, 0.30, 0.00, 0.00, 0.00, 0.00, 00.00, 0.00, 0.00, 0.30, 00.00};
+// 	test(P4);
+//   Serial.println("================================");
+// }
