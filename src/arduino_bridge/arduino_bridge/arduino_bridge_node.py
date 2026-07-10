@@ -99,11 +99,12 @@ class ArduinoBridgeNode(Node):
 
 	def _motor_commands_callback(self, msg: Float32MultiArray) -> None:
 		if self._serial is None:
+			self.get_logger().debug('Serial port not connected; dropping motor command')
 			return
 
 		# Send CSV + newline so Arduino can parse one command per line.
 		payload = ','.join(f'{value:.6f}' for value in msg.data) + '\n'
-
+		self.get_logger().debug(f'Sending to Arduino: {payload.strip()}')
 		try:
 			self._serial.write(payload.encode('utf-8'))
 			self._serial.flush()
