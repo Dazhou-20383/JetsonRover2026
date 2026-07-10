@@ -6,8 +6,8 @@
       "type": "lldb",
       "request": "launch",
       "args": [],
-      "cwd": "/Users/zhangboya/Documents/Github/JetsonRover2026",
-      "program": "/Users/zhangboya/Documents/Github/JetsonRover2026/build/Debug/outDebug"
+      "cwd": "/Users/zhangboya/Documents/Github/JetsonRover2026/src/motion-converter",
+      "program": "/Users/zhangboya/Documents/Github/JetsonRover2026/src/motion-converter/build/Debug/outDebug"
     }
   ]
 }
