@@ -34,8 +34,6 @@ class IPhonePoseNode(Node):
         yaw = float(payload['yaw'])
 
         msg = Pose2D()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.header.frame_id = 'map'
 
         msg.x = x
         msg.y = y
