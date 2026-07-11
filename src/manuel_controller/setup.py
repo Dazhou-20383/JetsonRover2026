@@ -20,6 +20,7 @@ setup(
 	entry_points={
 		'console_scripts': [
 			'manuel_controller_node = manuel_controller.manuel_controller_node:main',
+			'stop_node = manuel_controller.stop:main',
 		],
 	},
 )

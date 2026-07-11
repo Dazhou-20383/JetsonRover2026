@@ -40,4 +40,10 @@ def generate_launch_description():
 			name='arduino_bridge_node',
 			output='screen',
 		),
+		Node(
+			package='manuel_controller',
+			executable='stop_node',
+			name='stop_node',
+			output='screen',
+		),
 	])
