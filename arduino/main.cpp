@@ -13,10 +13,10 @@ constexpr size_t kLineBufferSize = 160;
 constexpr int kMotorPwmMin = 0;
 constexpr int kMotorPwmMax = 255;
 
-constexpr int8_t motorDirectionPinRight1 = 4;
-constexpr int8_t motorDirectionPinRight2 = 2;
-constexpr int8_t motorDirectionPinLeft1 = 7;
-constexpr int8_t motorDirectionPinLeft2 = 8;
+constexpr int8_t motorDirectionPinRight1 = 7;
+constexpr int8_t motorDirectionPinRight2 = 8;
+constexpr int8_t motorDirectionPinLeft1 = 4;
+constexpr int8_t motorDirectionPinLeft2 = 2;
  
 // Allows for only 90deg rotation, initial position is in the middle
 // Setup procedure: ensure servo is facing front
@@ -38,12 +38,12 @@ struct WheelChannel {
  
 // Edit these pins to match your Arduino wiring.
 WheelChannel kWheels[kWheelCount] = {
-		{11, false, true, 13, true, 1550},   // front-left
-		{5, true, true, 12, true, 1600},   // front-right
+		{11, false, false, 13, true, 1550},   // front-left
+		{5, true, false, 12, true, 1600},   // front-right
 		{-1, false, false, 0, false},  // middle-left: ignored
 		{-1, true, false, 0, false},  // middle-right: ignored
-		{6, false, true, 10, true, 1500},  // rear-left
-		{3, true, true, 9, true, 1550},  // rear-right
+		{6, false, false, 10, true, 1500},  // rear-left
+		{3, true, false, 9, true, 1550},  // rear-right
 };
  
 char gLineBuffer[kLineBufferSize];
