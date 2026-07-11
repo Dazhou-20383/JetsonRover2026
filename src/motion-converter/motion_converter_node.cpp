@@ -23,12 +23,12 @@ public:
         publisher_ = create_publisher<std_msgs::msg::Float32MultiArray>("/motion/motor_commands", 10);
 
         wheels_ = {
-                {0.4, -0.3, 0.0, 0.0},    // Front Left
-                {0.4, 0.3, 0.0, 0.0},   // Front Right
+                {0.31, -0.3, 0.0, 0.0},    // Front Left
+                {0.31, 0.3, 0.0, 0.0},   // Front Right
                 {0.0, -0.3, 0.0, 0.0},    // Middle Left
                 {0.0, 0.3, 0.0, 0.0},   // Middle Right
-                {-0.15, -0, 0.0, 0.0},   // Rear Left
-                {-0.15, 0, 0.0, 0.0},  // Rear Right
+                {-0.31, -0.3, 0.0, 0.0},   // Rear Left
+                {-0.31, 0.3, 0.0, 0.0},  // Rear Right
         };
     }
 
