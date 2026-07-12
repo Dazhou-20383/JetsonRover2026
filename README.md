@@ -1,124 +1,40 @@
-# Learning to Drive Anywhere with Model-Based Reannotation
-[![arXiv](https://img.shields.io/badge/arXiv-2407.08693-df2a2a.svg)](https://www.arxiv.org/abs/2505.05592)
-[![Python](https://img.shields.io/badge/python-3.10-blue)](https://www.python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Static Badge](https://img.shields.io/badge/Project-Page-a)](https://model-base-reannotation.github.io/)
+==NOTE: PROJECT IN PROGRESS.==
+# Urban Autonomous Rover
+Embodied intelligence and autonomy is a rapidly expanding area of research. Despite the ample end-to-end navigation and object avoidance work for small ground vehicles, there lack a open source solution for generalized urban navigation.
 
+Urban navigation not only requires planning, path following, object avoidance, etc., it also demands more nuanced scene understanding and decision making, like navigating a controlled intersection.
 
-[Noriaki Hirose](https://sites.google.com/view/noriaki-hirose/)<sup>1, 2</sup>, [Lydia Ignatova](https://www.linkedin.com/in/lydia-ignatova)<sup>1</sup>, [Kyle Stachowicz](https://kylesta.ch/)<sup>1</sup>, [Catherine Glossop](https://www.linkedin.com/in/catherineglossop/)<sup>1</sup>, [Sergey Levine](https://people.eecs.berkeley.edu/~svlevine/)<sup>1</sup>, [Dhruv Shah](https://robodhruv.github.io/)<sup>1, 3</sup>
+This project aims to leverage the general knowledge of LLM models and a low-level navigation model to enable small ground rovers to robustly navigate urban environments.
 
-<sup>1</sup> UC Berkeley (_Berkeley AI Research_),  <sup>2</sup> Toyota Motor North America,  <sup>3</sup> Princeton University
+Moreover, we are working under a budget and energy constrain so we choose to use only a commercial webcam for autonomy. For rapid prototyping, we developed ***iSLAM***, a framework to bridge iPhone pose estimation and GPS ability to a onboard computer.
 
-We present Model-Based ReAnnotation (MBRA), a framework that utilizes a learned short-horizon, model-based expert model to relabel or generate high-quality actions for passively collected data sources, including large volumes of crowd-sourced teleoperation data and unlabeled YouTube videos. This relabeled data is then distilled into LogoNav, a long-horizon navigation policy conditioned on visual goals or GPS waypoints. LogoNav, trained using MBRA-processed data, achieves state-of-the-art performance, enabling robust navigation over distances exceeding 300 meters in previously unseen indoor and outdoor environments.
+[rover img](assets/rover.JPG)
 
-![](media/teaser.png)
+> Rover under sunlight
 
+# Rover Performance
+***We have not tested the autonomy of the rover.*** The manual controller can be run with `bash manuel.bash` after connecting your iPhone joystick to the Jetson hotspot.
 
-### Installation
-Please down load our code and install some tools for making a conda environment to run our code. We recommend to run our code in the conda environment, although we do not mention the conda environments later.
+<video src="assets/demo.mp4" width="320" height="240" controls></video>
 
-1. Download the repository on your PC:
-    ```
-    git clone https://github.com/NHirose/Learning-to-Drive-Anywhere-with-MBRA.git
-    ```
-2. Set up the conda environment:
-    ```
-    cd Learning-to-Drive-Anywhere-with-MBRA
-    conda env create -f train/environment_mbra.yml
-    ```
-3. Source the conda environment:
-    ```
-    conda activate mbra
-    ```
-4. Install the MBRA packages:
-    ```
-    pip install -e train/
-    ```
-5. Install the `lerobot` package from this [repo](https://github.com/huggingface/lerobot):
-    ```
-    git clone https://github.com/huggingface/lerobot.git
-    cd lerobot
-    git checkout 97b1feb0b3c5f28c148dde8a9baf0a175be29d05
-    pip install -e .
-    ``` 
+**Dashboard**
+A dashboard server also can be used to monitor autonomy status wirelessly.
 
-6. (Optional) Install the diffusion_policy package from this [repo](https://github.com/real-stanford/diffusion_policy): 
-    ```
-    git clone git@github.com:real-stanford/diffusion_policy.git
-    pip install -e diffusion_policy/
-    ```
+[dashboard img](assets/dashboard.PNG)
 
-7. Download the model weights from this [link](https://huggingface.co/NHirose/MBRA_project_models/tree/main)
+# Autonomy Stack
+### High-level agent
+We used Ollama for local VLM inference. Between open source models, we found that Jetson can inference at our target frequency (0.2Hz) without OOM error for VLMs below 2 billion parameters. We choose `Qwen3.5:2b` for its visual understanding and pointing ability.
 
-8. Unzip the downloaded weights and place the folder in (your-directory)/Learning-to-Drive-Anywhere-with-MBRA/deployment
+The agent receives current observation, pose, and a navigation instruction. An agent harness is written from scratch. We give the following tools to the agent `stop()`, `turn()`, `place_waypoint()`,  `place_waypoint_precise()`. Notably, to enable precise navigation, `place_waypoint_precise()` allows the agent to point to a location on the observation image, which is translated into a corresponding waypoint on the 2D plane.
+### Low-level policy
+We use the logo_nav model from the paper [MBRA](https://github.com/NHirose/Learning-to-Drive-Anywhere-with-MBRA). Logo_nav receives the observation, pose, and target waypoint and outputs the Twist commands. Logo_nav is training on cross-embodiment data and have gained basic object avoidance ability.
 
-9. Download the sampler file from this [link](https://huggingface.co/datasets/NHirose/sampler_frodobots_dataset/tree/main)
+###  Hardware
+- [Jakkra's Mars Rover](https://github.com/jakkra/Mars-Rover)
+- Jetson Orin Nano Developer Kit 8GB
+- Arduino Uno
+- iPhone (for manuel control and pose estimation)
 
-10. Unzip the sampler file and place the folder in (your-directory)/Learning-to-Drive-Anywhere-with-MBRA/train/vint_train/data
-
-### Dataset
-1. Prepare GNM dataset mixture. Please check [here](https://github.com/robodhruv/visualnav-transformer/tree/main)
-
-2. Prepare Frodobots-2k dataset. You can download the Frodobots-2k dataset from [here](https://huggingface.co/datasets/frodobots/FrodoBots-2K)
-
-3. Download the repository to convert the dataset:
-    ```
-    cd ..
-    git clone https://github.com/catglossop/frodo_dataset.git
-    ```
-4. Change the format of Frodobots-2k dataset. Note that you need to specify the dataset directory and the directory to export the proccessed dataset in "convert_to_hf.py".
-    ```
-    cd frodo_dataset
-    python convert_to_hf.py
-    ```
-
-### Training
-1. Change the directory
-    ```
-    cd ../Learning-to-Drive-Anywhere-with-MBRA/train/
-    ```
-2. Edit the yaml files in (your-directory)/Learning-to-Drive-Anywhere-with-MBRA/train/config to make a path for all datasets and checkpoints. 
-
-3. Train the MBRA model to reannotate the dataset,
-    ```
-    python train.py -c ./config/MBRA.yaml
-    ```
-4. Train the LogoNav policy with MBRA model
-    ```
-    python train.py -c ./config/LogoNav.yaml
-    ```
-### Inference (ROS)
-1. ROS system. Please setup ROS in your PC and run the following. Our node subscribes the image topic "/usb_cam/image_raw" and calculate our policy as a callback function. The goal pose at line 243 and 244 and the current robot pose at line 104, 105 and 106 in LogoNav_ros.py have to be decided by yourself. 
-    ```
-    cd ../deployment/
-    python LogoNav_ros.py
-    ```
-### Inference (FrodoBots system)    
-1. Dowload the FrodoBots SDK and setup following their website.
-    ```
-    cd ..
-    git clone https://github.com/frodobots-org/earth-rovers-sdk.git
-    ```
-2. Move our code
-    ```
-    mv ./deployment/LogoNav_frodobot.py ./deployment/earth-rovers-sdk/utils/
-    mv ./deployment/utils_logonav.py ./deployment/earth-rovers-sdk/utils/
-    ```
-3. Run our code. Before running our policy, you need to setup the Frodobots (ERZ) according to their [website](https://github.com/frodobots-org/earth-rovers-sdk). You can setup the goal pose at line 219 and 220. Note that we use our own GPS instead of the mounted GPS on Frodobot to conduct more reliable evaluation with accurate localization.
-    ```
-    cd ./deployment/utils/
-    python LogoNav_frodobot.py"
-    ```
-   
-## Citing
-```
-@misc{hirose2025mbra,
-      title={Learning to Drive Anywhere with Model-Based Reannotation}, 
-      author={Noriaki Hirose and Lydia Ignatova and Kyle Stachowicz and Catherine Glossop and Sergey Levine and Dhruv Shah},
-      year={2025},
-      eprint={2505.05592},
-      archivePrefix={arXiv},
-      primaryClass={cs.RO},
-      url={https://arxiv.org/abs/2505.05592}, 
-}
-```
+---
+**Special thanks** to Jeffrey Juncheng Guo, Adit Bhargava, and Daniel Tianhao Yang for sponsoring this project with electronics, accomodation, and, critically, your 3D printer. The progress we made is impossible without you.
