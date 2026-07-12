@@ -8,7 +8,7 @@ This project aims to leverage the general knowledge of LLM models and a low-leve
 
 Moreover, we are working under a budget and energy constrain so we choose to use only a commercial webcam for autonomy. For rapid prototyping, we developed ***iSLAM***, a framework to bridge iPhone pose estimation and GPS ability to a onboard computer.
 
-[rover img](assets/rover.JPG)
+![rover img](assets/rover.JPG)
 
 > Rover under sunlight
 
@@ -20,7 +20,7 @@ Moreover, we are working under a budget and energy constrain so we choose to use
 **Dashboard**
 A dashboard server also can be used to monitor autonomy status wirelessly.
 
-[dashboard img](assets/dashboard.PNG)
+![dashboard img](assets/dashboard.PNG)
 
 # Autonomy Stack
 ### High-level agent
