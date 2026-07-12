@@ -15,7 +15,11 @@ Moreover, we are working under a budget and energy constrain so we choose to use
 # Rover Performance
 ***We have not tested the autonomy of the rover.*** The manual controller can be run with `bash manuel.bash` after connecting your iPhone joystick to the Jetson hotspot.
 
-<video src="assets/demo.mp4" width="320" height="240" controls></video>
+
+
+https://github.com/user-attachments/assets/c28c2bde-2ef2-4005-b51a-87c4eb4a28e1
+
+
 
 **Dashboard**
 A dashboard server also can be used to monitor autonomy status wirelessly.
