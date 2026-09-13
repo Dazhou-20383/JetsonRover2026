@@ -26,6 +26,25 @@ A dashboard server also can be used to monitor autonomy status wirelessly.
 
 ![dashboard img](assets/dashboard.PNG)
 
+# How to Run
+**Arduino** — `/arduino/main.cpp`, upload from your computer via the Arduino IDE. Most hardware interaction config lives here (and in `motion-converter`), so this is where you tune hardware behaviour. All motors can currently reach max PWM. Servo initial position is set via `WheelChannel.ServoInitUs`, where `1500` is neutral (maximum left/right range).
+```bash
+# run 1. manual controller  2. MBRA only  3. full autonomy
+bash manuel.bash
+bash mbra.bash
+bash rover.bash
+```
+
+**Manuel Controllerr** — `/ios/Rover-joystick`, build with Xcode. The stop button only works in MBRA mode; the joystick only works in manual mode.
+
+**MBRA Only** — open a second SSH terminal and publish a waypoint:
+```bash
+ros2 topic pub --once /mbra/waypoints geometry_msgs/msg/Point "{x: 100.0, y: 0.0, z: 0.0}"
+```
+then hit enable on your phone.
+
+**Dashboard** — on the Jetson: `ros2 run video_logger dashboard_node`. On your computer (connected to the Jetson hotspot): `cd dashboard; npm start`.
+
 # Autonomy Stack
 ### High-level agent
 We used Ollama for local VLM inference. Between open source models, we found that Jetson can inference at our target frequency (0.2Hz) without OOM error for VLMs below 2 billion parameters. We choose `Qwen3.5:2b` for its visual understanding and pointing ability.
