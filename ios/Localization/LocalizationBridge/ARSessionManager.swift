@@ -152,7 +152,7 @@ final class ARSessionManager: NSObject, ObservableObject, ARSessionDelegate {
             yaw = roundedPose.yaw
             latestPoseText = Self.poseText(for: roundedPose)
             do {
-                _ = try networkManager.sendMessage(
+                try networkManager.sendMessage(
                     PosePayload(x: roundedPose.x, y: roundedPose.y, yaw: roundedPose.yaw)
                 )
                 debugLogStore.append(String(format: "AR: sent pose x=%.4f y=%.4f yaw=%.4f", roundedPose.x, roundedPose.y, roundedPose.yaw))

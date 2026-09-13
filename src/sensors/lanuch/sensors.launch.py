@@ -16,4 +16,10 @@ def generate_launch_description():
 			name='iphone_pose_node',
 			output='screen',
 		),
+		Node(
+			package='sensors',
+			executable='waypoint_bridge_node',
+			name='waypoint_bridge_node',
+			output='screen',
+		),
 	])

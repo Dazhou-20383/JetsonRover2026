@@ -30,6 +30,7 @@ setup(
         'console_scripts': [
                 'camera_node = sensors.camera_node:main',
                 'iphone_pose_node = sensors.iphone_pose_node:main',
+                'waypoint_bridge_node = sensors.waypoint_bridge_node:main',
         ],
     },
 )

@@ -1,9 +1,11 @@
 import Darwin
 import Foundation
 
-/// Shared transport for messages sent from the iOS app to the Jetson.
-/// The current app uses UDP, while the transport enum leaves room for
-/// future TCP-based integrations without changing higher-level features.
+/// Transport for messages sent from the iOS app to the Jetson. Each instance
+/// owns one socket for one transport; the app creates one UDP instance for
+/// the AR pose stream and one TCP instance for MapKit waypoint/route
+/// messages (see `LocalizationBridgeApp`), rather than sharing a single
+/// socket across both.
 final class NetworkManager {
     enum Transport: String {
         case udp
@@ -70,20 +72,35 @@ final class NetworkManager {
         close(socketFD)
     }
 
-    func sendMessage<T: Encodable>(_ message: T) throws -> String {
+    /// Encodes and sends a message. Callers that already have their own encoded
+    /// `Data` (e.g. because they also need it for an on-screen preview) should
+    /// call `send(data:)` directly instead, to avoid encoding the same message twice.
+    func sendMessage<T: Encodable>(_ message: T) throws {
         let data = try encoder.encode(message)
         try send(data: data)
-
-        guard let jsonString = String(data: data, encoding: .utf8) else {
-            throw NetworkManagerError.payloadEncodingFailed
-        }
-
-        return jsonString
     }
 
-    private func send(data: Data) throws {
+    /// Sends pre-encoded bytes as-is. Exposed so callers that already hold an
+    /// encoded payload (for a preview, a cache, etc.) can send it without
+    /// re-encoding through this type's own `encoder`.
+    func send(data: Data) throws {
+        // TCP is a byte stream with no built-in message boundaries, so each
+        // payload needs an explicit delimiter; UDP datagrams are already
+        // whole messages and need none.
+        let framedData: Data
+        switch transport {
+        case .udp:
+            framedData = data
+        case .tcp:
+            framedData = data + Data([0x0A]) // "\n"
+        }
+
         try sendQueue.sync {
-            let bytesSent = try data.withUnsafeBytes { buffer -> Int in
+            guard !framedData.isEmpty else {
+                throw NetworkManagerError.emptyPayload
+            }
+
+            let bytesSent = try framedData.withUnsafeBytes { buffer -> Int in
                 guard let baseAddress = buffer.baseAddress else {
                     throw NetworkManagerError.emptyPayload
                 }
@@ -118,8 +135,8 @@ final class NetworkManager {
                 }
             }
 
-            guard bytesSent == data.count else {
-                throw NetworkManagerError.partialSend(expected: data.count, actual: bytesSent)
+            guard bytesSent == framedData.count else {
+                throw NetworkManagerError.partialSend(expected: framedData.count, actual: bytesSent)
             }
         }
     }
@@ -130,7 +147,6 @@ enum NetworkManagerError: Error, LocalizedError {
     case invalidAddress(String)
     case connectionFailed(host: String, port: UInt16, code: Int32)
     case emptyPayload
-    case payloadEncodingFailed
     case partialSend(expected: Int, actual: Int)
     case sendFailed(code: Int32, transport: NetworkManager.Transport)
 
@@ -144,8 +160,6 @@ enum NetworkManagerError: Error, LocalizedError {
             return "Failed to connect to \(host):\(port) over TCP (errno \(code))."
         case .emptyPayload:
             return "Refusing to send an empty payload."
-        case .payloadEncodingFailed:
-            return "Unable to encode payload as UTF-8 JSON."
         case .partialSend(let expected, let actual):
             return "Sent \(actual) of \(expected) bytes."
         case .sendFailed(let code, let transport):

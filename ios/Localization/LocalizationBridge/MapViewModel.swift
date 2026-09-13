@@ -25,6 +25,30 @@ final class MapViewModel: ObservableObject {
         let instructions: String
     }
 
+    /// Rounds a coordinate to ~1 meter of precision so nearby requests for
+    /// the same origin/destination pair hit the same cache entry.
+    private struct RouteCacheKey: Hashable {
+        let originLatitude: Int
+        let originLongitude: Int
+        let destinationLatitude: Int
+        let destinationLongitude: Int
+
+        init(origin: CLLocationCoordinate2D, destination: CLLocationCoordinate2D) {
+            func rounded(_ value: CLLocationDegrees) -> Int {
+                Int((value * 100_000).rounded())
+            }
+            originLatitude = rounded(origin.latitude)
+            originLongitude = rounded(origin.longitude)
+            destinationLatitude = rounded(destination.latitude)
+            destinationLongitude = rounded(destination.longitude)
+        }
+    }
+
+    private struct CachedRoute {
+        let route: MKRoute
+        let cachedAt: Date
+    }
+
     @Published var selectedCoordinate: CLLocationCoordinate2D?
     @Published var hasCenteredOnUser = false
     @Published private(set) var recenterRequestID = 0
@@ -42,6 +66,8 @@ final class MapViewModel: ObservableObject {
     private let encoder: JSONEncoder
     private var cancellables = Set<AnyCancellable>()
     private var routeTask: Task<Void, Never>?
+    private var routeCache: [RouteCacheKey: CachedRoute] = [:]
+    private let routeCacheTTL: TimeInterval = 120
 
     init(networkManager: NetworkManager, debugLogStore: DebugLogStore) {
         self.networkManager = networkManager
@@ -155,8 +181,13 @@ final class MapViewModel: ObservableObject {
         let message = makeWaypointMessage(for: coordinate)
 
         do {
-            let json = try networkManager.sendMessage(message)
-            jsonPreview = prettyPrintedJSON(from: json) ?? json
+            // Encode once with our own pretty-printing encoder: the same
+            // bytes are shown in the preview and sent over the wire, rather
+            // than sending a compact encoding and separately re-parsing it
+            // back into a pretty one for display.
+            let data = try encoder.encode(message)
+            jsonPreview = String(decoding: data, as: UTF8.self)
+            try networkManager.send(data: data)
             statusMessage = "Goal sent to Jetson. Planning route guidance..."
             debugLogStore.append("Map: goal sent")
             isPlanningRoute = true
@@ -204,27 +235,37 @@ final class MapViewModel: ObservableObject {
                 return
             }
 
-            let request = MKDirections.Request()
-            request.source = MKMapItem(
-                placemark: MKPlacemark(coordinate: currentCoordinate)
-            )
-            request.destination = MKMapItem(
-                placemark: MKPlacemark(coordinate: destination)
-            )
-            request.transportType = .walking
-
-            let directions = MKDirections(request: request)
+            let cacheKey = RouteCacheKey(origin: currentCoordinate, destination: destination)
 
             do {
-                let response = try await directions.calculate()
-                guard !Task.isCancelled else { return }
+                let route: MKRoute
+                if let cached = self.cachedRoute(for: cacheKey) {
+                    route = cached
+                    debugLogStore.append("Map: reused cached route")
+                } else {
+                    let request = MKDirections.Request()
+                    request.source = MKMapItem(
+                        placemark: MKPlacemark(coordinate: currentCoordinate)
+                    )
+                    request.destination = MKMapItem(
+                        placemark: MKPlacemark(coordinate: destination)
+                    )
+                    request.transportType = .walking
 
-                guard let route = response.routes.first else {
-                    nextStepBuffer = nil
-                    routeInstructionBuffer = []
-                    routeGuidance = nil
-                    statusMessage = "Goal sent to Jetson. No route guidance is available for this waypoint."
-                    return
+                    let directions = MKDirections(request: request)
+                    let response = try await directions.calculate()
+                    guard !Task.isCancelled else { return }
+
+                    guard let calculatedRoute = response.routes.first else {
+                        nextStepBuffer = nil
+                        routeInstructionBuffer = []
+                        routeGuidance = nil
+                        statusMessage = "Goal sent to Jetson. No route guidance is available for this waypoint."
+                        return
+                    }
+
+                    route = calculatedRoute
+                    self.cacheRoute(route, for: cacheKey)
                 }
 
                 let instructions = actionableInstructions(in: route)
@@ -264,7 +305,7 @@ final class MapViewModel: ObservableObject {
                         destination: destination,
                         goalTimestamp: goalTimestamp
                     )
-                    _ = try networkManager.sendMessage(routeGuideMessage)
+                    try networkManager.sendMessage(routeGuideMessage)
                     statusMessage = "Goal sent to Jetson. Tagged route guide emitted for VLM/ROS2."
                 } catch {
                     statusMessage = "Goal sent and route shown, but route-guide payload failed: \(error.localizedDescription)"
@@ -356,15 +397,22 @@ final class MapViewModel: ObservableObject {
         )
     }
 
-    private func prettyPrintedJSON(from json: String) -> String? {
-        guard let data = json.data(using: .utf8),
-              let object = try? JSONSerialization.jsonObject(with: data),
-              let normalized = try? JSONSerialization.data(withJSONObject: object, options: [.prettyPrinted, .sortedKeys])
+    private func cachedRoute(for key: RouteCacheKey) -> MKRoute? {
+        guard let cached = routeCache[key],
+              Date().timeIntervalSince(cached.cachedAt) < routeCacheTTL
         else {
             return nil
         }
+        return cached.route
+    }
 
-        return String(decoding: normalized, as: UTF8.self)
+    private func cacheRoute(_ route: MKRoute, for key: RouteCacheKey) {
+        // Small, opportunistic prune so the cache doesn't grow without bound
+        // over a long session; this app only ever has a handful of entries
+        // at once, so a full scan on insert is more than cheap enough.
+        let now = Date()
+        routeCache = routeCache.filter { now.timeIntervalSince($0.value.cachedAt) < routeCacheTTL }
+        routeCache[key] = CachedRoute(route: route, cachedAt: now)
     }
 
     private func firstActionableStep(in route: MKRoute) -> MKRoute.Step? {
