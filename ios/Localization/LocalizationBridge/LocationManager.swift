@@ -7,6 +7,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
     @Published private(set) var currentLocation: CLLocation?
     @Published private(set) var headingDegrees: Double?
     @Published private(set) var errorMessage: String?
+    @Published private(set) var isAuthorizationDenied = false
 
     private let manager = CLLocationManager()
 
@@ -14,6 +15,8 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         super.init()
         manager.delegate = self
         manager.desiredAccuracy = kCLLocationAccuracyBest
+        // Ignore sub-2° heading jitter: fewer delegate wake-ups and UI redraws.
+        manager.headingFilter = 2
         errorMessage = "Waiting for map location updates..."
     }
 
@@ -29,6 +32,7 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         case .authorized, .authorizedAlways, .authorizedWhenInUse:
             manager.startUpdatingHeading()
         case .denied, .restricted:
+            isAuthorizationDenied = true
             errorMessage = "Location permission denied. Enable Location in Settings."
         @unknown default:
             break
@@ -40,8 +44,10 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
             switch manager.authorizationStatus {
             case .authorized, .authorizedAlways, .authorizedWhenInUse:
                 self.errorMessage = nil
+                self.isAuthorizationDenied = false
                 manager.startUpdatingHeading()
             case .denied, .restricted:
+                self.isAuthorizationDenied = true
                 self.errorMessage = "Location permission denied. Enable Location in Settings."
             case .notDetermined:
                 break

@@ -20,6 +20,8 @@
 	<string>1</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>The rover app needs your location to show the current position, heading, and manual navigation goals.</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Connects to the rover's Jetson on the local network to stream pose, camera, and waypoint data.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Allow camera access for AR visual-inertial odometry</string>
 </dict>

@@ -58,6 +58,12 @@ final class MapViewModel: ObservableObject {
     @Published private(set) var routeInstructionBuffer: [RouteInstruction] = []
     @Published private(set) var routeGuidance: RouteGuidance?
     @Published private(set) var isPlanningRoute = false
+    /// The route planned (over cellular/Wi-Fi) for the selected goal. It is
+    /// planned as soon as a goal is dropped, independent of the rover link,
+    /// because the phone usually loses internet once it is tethered to the
+    /// Jetson. Sending the goal later reuses this route with no network.
+    @Published private(set) var plannedRoute: MKRoute?
+    @Published private(set) var routeError: String?
 
     let locationManager: LocationManager
 
@@ -68,6 +74,11 @@ final class MapViewModel: ObservableObject {
     private var routeTask: Task<Void, Never>?
     private var routeCache: [RouteCacheKey: CachedRoute] = [:]
     private let routeCacheTTL: TimeInterval = 120
+    private var plannedRouteOrigin: CLLocationCoordinate2D?
+    private var planID = 0
+    /// Set when a goal was dropped before the first GPS fix; planning starts
+    /// as soon as a location arrives.
+    private var isWaitingForLocationToPlan = false
 
     init(networkManager: NetworkManager, debugLogStore: DebugLogStore) {
         self.networkManager = networkManager
@@ -81,8 +92,12 @@ final class MapViewModel: ObservableObject {
         debugLogStore.append("Map: initialized")
 
         locationManager.$currentLocation
-            .sink { [weak self] (_: CLLocation?) in
-                self?.refreshPreview()
+            .sink { [weak self] (location: CLLocation?) in
+                guard let self else { return }
+                self.refreshPreview()
+                if location != nil && self.isWaitingForLocationToPlan {
+                    self.planRoute()
+                }
             }
             .store(in: &cancellables)
     }
@@ -131,6 +146,12 @@ final class MapViewModel: ObservableObject {
         return String(format: "%.1f° %@", bearing, cardinalDirection(for: bearing))
     }
 
+    var routeSummaryText: String? {
+        guard let plannedRoute else { return nil }
+        let minutes = max(1, Int((plannedRoute.expectedTravelTime / 60).rounded()))
+        return "\(formattedDistance(plannedRoute.distance)) · \(minutes) min walk"
+    }
+
     var canSendGoal: Bool {
         selectedCoordinate != nil
     }
@@ -161,45 +182,166 @@ final class MapViewModel: ObservableObject {
     }
 
     func selectWaypoint(at coordinate: CLLocationCoordinate2D) {
-        routeTask?.cancel()
         selectedCoordinate = coordinate
-        nextStepBuffer = nil
-        routeInstructionBuffer = []
-        routeGuidance = nil
-        isPlanningRoute = false
-        statusMessage = "Waypoint selected. Review the payload and send when ready."
         debugLogStore.append(String(format: "Map: waypoint selected lat=%.6f lon=%.6f", coordinate.latitude, coordinate.longitude))
+        refreshPreview()
+        planRoute()
+    }
+
+    func clearWaypoint() {
+        selectedCoordinate = nil
+        resetRoute()
+        statusMessage = "Long-press on the map to select a waypoint."
         refreshPreview()
     }
 
-    func sendGoal() async -> Bool {
+    /// Plans a walking route from the current location to the selected goal.
+    /// Needs internet (MapKit), but not the rover link.
+    func planRoute() {
+        guard let destination = selectedCoordinate else { return }
+        resetRoute()
+
+        guard let origin = currentCoordinate else {
+            isWaitingForLocationToPlan = true
+            routeError = "Waiting for your location to plan a route…"
+            statusMessage = "Goal selected. Waiting for your location to plan a route."
+            return
+        }
+
+        isPlanningRoute = true
+        statusMessage = "Planning route…"
+        planID += 1
+        let thisPlan = planID
+        let cacheKey = RouteCacheKey(origin: origin, destination: destination)
+
+        routeTask = Task { [weak self] in
+            guard let self else { return }
+            do {
+                let route: MKRoute
+                if let cached = self.cachedRoute(for: cacheKey) {
+                    route = cached
+                    self.debugLogStore.append("Map: reused cached route")
+                } else {
+                    let request = MKDirections.Request()
+                    request.source = MKMapItem(placemark: MKPlacemark(coordinate: origin))
+                    request.destination = MKMapItem(placemark: MKPlacemark(coordinate: destination))
+                    request.transportType = .walking
+
+                    let response = try await MKDirections(request: request).calculate()
+                    guard let calculated = response.routes.first else {
+                        throw RoutePlanningError.noRoute
+                    }
+                    route = calculated
+                    self.cacheRoute(route, for: cacheKey)
+                }
+
+                guard !Task.isCancelled, thisPlan == self.planID else { return }
+                self.apply(route: route, origin: origin)
+            } catch {
+                guard !Task.isCancelled, thisPlan == self.planID else { return }
+                self.isPlanningRoute = false
+                let message: String
+                if let mkError = error as? MKError, mkError.code == .serverFailure || mkError.code == .loadingThrottled {
+                    message = "Couldn't reach Apple Maps. Route planning needs internet, so plan before tethering to the rover."
+                } else if error is RoutePlanningError {
+                    message = "No walking route to this goal."
+                } else {
+                    message = "Route planning failed: \(error.localizedDescription)"
+                }
+                self.routeError = message
+                self.statusMessage = "Goal selected without a route. You can still send the goal alone."
+                self.debugLogStore.append("Map: route planning failed - \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func apply(route: MKRoute, origin: CLLocationCoordinate2D) {
+        isPlanningRoute = false
+        plannedRoute = route
+        plannedRouteOrigin = origin
+        routeInstructionBuffer = actionableInstructions(in: route)
+
+        if let nextStep = firstActionableStep(in: route) {
+            let nextInstruction = displayInstruction(for: nextStep)
+            let intersectionName = inferredIntersectionName(from: nextStep)
+            let directionText = bearingForStep(nextStep).map {
+                String(format: "%.1f° %@", $0, cardinalDirection(for: $0))
+            } ?? "Unavailable"
+
+            nextStepBuffer = BufferedStep(
+                instruction: nextInstruction,
+                distanceText: formattedDistance(nextStep.distance),
+                landmarkText: intersectionName
+            )
+            routeGuidance = RouteGuidance(
+                distanceToNextLandmarkText: formattedDistance(nextStep.distance),
+                intersectionName: intersectionName,
+                absoluteDirectionText: directionText,
+                instructions: nextInstruction
+            )
+        }
+
+        statusMessage = "Route ready. Connect to the rover and send it."
+        debugLogStore.append("Map: route planned (\(routeInstructionBuffer.count) steps)")
+    }
+
+    private func resetRoute() {
+        routeTask?.cancel()
+        planID += 1
+        isWaitingForLocationToPlan = false
+        isPlanningRoute = false
+        plannedRoute = nil
+        plannedRouteOrigin = nil
+        routeError = nil
+        nextStepBuffer = nil
+        routeInstructionBuffer = []
+        routeGuidance = nil
+    }
+
+    /// Sends the goal and, if one was planned, its route guide. Uses only the
+    /// rover link: no MapKit/internet access happens here.
+    func sendGoal() {
         guard let coordinate = selectedCoordinate else {
             statusMessage = "Select a waypoint before sending."
-            return false
+            return
         }
 
         let message = makeWaypointMessage(for: coordinate)
 
         do {
-            // Encode once with our own pretty-printing encoder: the same
-            // bytes are shown in the preview and sent over the wire, rather
-            // than sending a compact encoding and separately re-parsing it
-            // back into a pretty one for display.
+            // The pretty-printed encoding is for the on-screen preview only.
+            // The wire format must be compact: the TCP channel is
+            // newline-delimited JSON, so a pretty-printed message would be
+            // split into one malformed line per field on the Jetson.
             let data = try encoder.encode(message)
             jsonPreview = String(decoding: data, as: UTF8.self)
-            try networkManager.send(data: data)
-            statusMessage = "Goal sent to Jetson. Planning route guidance..."
+            try networkManager.sendMessage(message)
             debugLogStore.append("Map: goal sent")
-            isPlanningRoute = true
-            nextStepBuffer = nil
-            routeInstructionBuffer = []
-            routeGuidance = nil
-            await updateRouteGuidance(to: coordinate, goalTimestamp: message.timestamp)
-            return true
         } catch {
-            statusMessage = error.localizedDescription
+            statusMessage = "Couldn't send goal: \(error.localizedDescription)"
             debugLogStore.append("Map: goal send failed - \(error.localizedDescription)")
-            return false
+            return
+        }
+
+        guard let route = plannedRoute, let origin = plannedRouteOrigin else {
+            statusMessage = "Goal sent to the rover (no route attached)."
+            return
+        }
+
+        do {
+            try networkManager.sendMessage(
+                makeRouteGuideMessage(
+                    route: route,
+                    origin: origin,
+                    destination: coordinate,
+                    goalTimestamp: message.timestamp
+                )
+            )
+            statusMessage = "Goal and route sent to the rover."
+            debugLogStore.append("Map: route guide sent")
+        } catch {
+            statusMessage = "Goal sent, but the route failed to send: \(error.localizedDescription)"
+            debugLogStore.append("Map: route guide send failed - \(error.localizedDescription)")
         }
     }
 
@@ -218,110 +360,6 @@ final class MapViewModel: ObservableObject {
             jsonPreview = ""
             statusMessage = error.localizedDescription
         }
-    }
-
-    private func updateRouteGuidance(to destination: CLLocationCoordinate2D, goalTimestamp: Double) async {
-        routeTask?.cancel()
-
-        let task = Task { [weak self] in
-            guard let self else { return }
-            defer { isPlanningRoute = false }
-
-            guard let currentCoordinate else {
-                nextStepBuffer = nil
-                routeInstructionBuffer = []
-                routeGuidance = nil
-                statusMessage = "Goal sent to Jetson. Current location is unavailable for route planning."
-                return
-            }
-
-            let cacheKey = RouteCacheKey(origin: currentCoordinate, destination: destination)
-
-            do {
-                let route: MKRoute
-                if let cached = self.cachedRoute(for: cacheKey) {
-                    route = cached
-                    debugLogStore.append("Map: reused cached route")
-                } else {
-                    let request = MKDirections.Request()
-                    request.source = MKMapItem(
-                        placemark: MKPlacemark(coordinate: currentCoordinate)
-                    )
-                    request.destination = MKMapItem(
-                        placemark: MKPlacemark(coordinate: destination)
-                    )
-                    request.transportType = .walking
-
-                    let directions = MKDirections(request: request)
-                    let response = try await directions.calculate()
-                    guard !Task.isCancelled else { return }
-
-                    guard let calculatedRoute = response.routes.first else {
-                        nextStepBuffer = nil
-                        routeInstructionBuffer = []
-                        routeGuidance = nil
-                        statusMessage = "Goal sent to Jetson. No route guidance is available for this waypoint."
-                        return
-                    }
-
-                    route = calculatedRoute
-                    self.cacheRoute(route, for: cacheKey)
-                }
-
-                let instructions = actionableInstructions(in: route)
-                routeInstructionBuffer = instructions
-
-                guard let nextStep = firstActionableStep(in: route)
-                else {
-                    nextStepBuffer = nil
-                    routeGuidance = nil
-                    statusMessage = "Goal sent to Jetson. No route guidance is available for this waypoint."
-                    return
-                }
-
-                let nextInstruction = displayInstruction(for: nextStep)
-                let intersectionName = inferredIntersectionName(from: nextStep)
-                let stepBearing = bearingForStep(nextStep)
-                let directionText = stepBearing.map {
-                    String(format: "%.1f° %@", $0, self.cardinalDirection(for: $0))
-                } ?? "Unavailable"
-
-                nextStepBuffer = BufferedStep(
-                    instruction: nextInstruction,
-                    distanceText: formattedDistance(nextStep.distance),
-                    landmarkText: intersectionName
-                )
-                routeGuidance = RouteGuidance(
-                    distanceToNextLandmarkText: formattedDistance(nextStep.distance),
-                    intersectionName: intersectionName,
-                    absoluteDirectionText: directionText,
-                    instructions: nextInstruction
-                )
-
-                do {
-                    let routeGuideMessage = makeRouteGuideMessage(
-                        route: route,
-                        origin: currentCoordinate,
-                        destination: destination,
-                        goalTimestamp: goalTimestamp
-                    )
-                    try networkManager.sendMessage(routeGuideMessage)
-                    statusMessage = "Goal sent to Jetson. Tagged route guide emitted for VLM/ROS2."
-                } catch {
-                    statusMessage = "Goal sent and route shown, but route-guide payload failed: \(error.localizedDescription)"
-                }
-            } catch is CancellationError {
-                return
-            } catch {
-                nextStepBuffer = nil
-                routeInstructionBuffer = []
-                routeGuidance = nil
-                statusMessage = "Goal sent to Jetson, but route planning failed: \(error.localizedDescription)"
-            }
-        }
-
-        routeTask = task
-        await task.value
     }
 
     private var distanceToSelectedWaypointMeters: CLLocationDistance? {
@@ -587,4 +625,8 @@ final class MapViewModel: ObservableObject {
         formatter.maximumFractionDigits = 6
         return formatter
     }()
+}
+
+private enum RoutePlanningError: Error {
+    case noRoute
 }

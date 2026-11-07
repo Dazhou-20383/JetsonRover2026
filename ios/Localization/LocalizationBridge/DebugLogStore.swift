@@ -7,15 +7,22 @@ final class DebugLogStore: ObservableObject {
 
     private let maximumEntries: Int
 
-    init(maximumEntries: Int = 20) {
+    init(maximumEntries: Int = 200) {
         self.maximumEntries = maximumEntries
     }
 
     func append(_ message: String) {
-        entries.append(message)
+        let timestamp = Self.timeFormatter.string(from: Date())
+        entries.append("\(timestamp)  \(message)")
 
         if entries.count > maximumEntries {
             entries.removeFirst(entries.count - maximumEntries)
         }
     }
+
+    private static let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss"
+        return formatter
+    }()
 }
